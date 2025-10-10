@@ -22,6 +22,7 @@ import itertools
 import functools
 import struct
 import logging
+import shutil
 
 from .util.wsproto import WSProto, to_bytes
 from .util.wsserver import WSServer
@@ -81,8 +82,8 @@ class QwopEnv(gym.Env):
     """
     A Gymnasium environment for Bennet Foddy's game QWOP (numeric state only).
 
-    browser: Path to the web browser executable.
-    driver: Path to the chromedriver executable.
+    browser: Path to the web browser executable (defaults to 'chrome_for_testing' from PATH).
+    driver: Path to the chromedriver executable (defaults to 'chromedriver_for_testing' from PATH).
     failure_cost: Subtracted from the reward at the end of unsuccessful episodes.
     success_reward: Added to the reward at the end of successful episodes.
     time_cost_mult: Multiplier for the amount subtracted from the reward at each step.
@@ -102,8 +103,8 @@ class QwopEnv(gym.Env):
 
     def __init__(
         self,
-        browser=None,
-        driver=None,
+        browser: str | None = None,
+        driver: str | None = None,
         failure_cost=10,
         success_reward=50,
         time_cost_mult=10,
@@ -129,15 +130,21 @@ class QwopEnv(gym.Env):
             self.shutdown = None
         else:
             if browser is None:
-                raise ValueError(
-                    "please specify a valid path to a chrome-based browser executable"
-                    + " via the `browser` constructor argument"
-                )
+                browser = shutil.which("chrome_for_testing")
+                if browser is None:
+                    raise ValueError(
+                        "please specify a valid path to a chrome-based browser executable"
+                        + " via the `browser` constructor argument"
+                        + " or ensure 'chrome_for_testing' is available in PATH"
+                    )
             if driver is None:
-                raise ValueError(
-                    "please specify a valid path to a chromedriver executable via"
-                    + " the `driver` constructor argument"
-                )
+                driver = shutil.which("chromedriver_for_testing")
+                if driver is None:
+                    raise ValueError(
+                        "please specify a valid path to a chromedriver executable via"
+                        + " the `driver` constructor argument"
+                        + " or ensure 'chromedriver_for_testing' is available in PATH"
+                    )
 
             sock = socket.socket()
             sock.bind(("localhost", 0))
@@ -153,9 +160,7 @@ class QwopEnv(gym.Env):
                 loglevel=loglevel,
             )
             self.shutdown = multiprocessing.Event()
-            self.proc = multiprocessing.Process(
-                target=server.start, kwargs={"shutdown": self.shutdown}
-            )
+            self.proc = multiprocessing.Process(target=server.start, kwargs={"shutdown": self.shutdown})
             self.proc.start()
             self.client = WSClient(sock.getsockname()[1], loglevel, self.shutdown)
 
@@ -166,9 +171,7 @@ class QwopEnv(gym.Env):
         self._set_keycodes()
 
         self.action_space = gym.spaces.Discrete(len(self.action_cmdflags))
-        self.observation_space = gym.spaces.Box(
-            shape=(60,), low=-1, high=1, dtype=DTYPE
-        )
+        self.observation_space = gym.spaces.Box(shape=(60,), low=-1, high=1, dtype=DTYPE)
 
         self.speed_rew_mult = DTYPE(0.01)
         self.time_cost_mult = DTYPE(time_cost_mult)
@@ -237,9 +240,7 @@ class QwopEnv(gym.Env):
                 self.keyflags_c.remove(tuple(keymap.get(x) for x in rc))
 
         # Key combinations represented as WSProto cmdflags
-        self.action_cmdflags = [
-            functools.reduce(lambda a, e: a | e, t, 0) for t in self.keyflags_c
-        ]
+        self.action_cmdflags = [functools.reduce(lambda a, e: a | e, t, 0) for t in self.keyflags_c]
 
     def reset(self, seed=None, options=None):
         super().reset(seed=seed)

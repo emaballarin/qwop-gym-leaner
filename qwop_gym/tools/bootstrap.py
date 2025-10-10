@@ -112,7 +112,7 @@ def bootstrap():
         pathlib.Path("config") / "wandb",
         w1.overwrite,
         browser_path=w1.browser_path,
-        driver_path=w1.driver_path
+        driver_path=w1.driver_path,
     )
 
     w2.maybe_write("a2c.yml", w2.replace_paths)
@@ -122,9 +122,7 @@ def bootstrap():
     w2.maybe_write("qrdqn.yml", w2.replace_paths)
     w2.maybe_write("rppo.yml", w2.replace_paths)
 
-    gamefile = (
-        pathlib.Path(__file__).parents[1] / "envs" / "v1" / "game" / "QWOP.min.js"
-    )
+    gamefile = pathlib.Path(__file__).parents[1] / "envs" / "v1" / "game" / "QWOP.min.js"
 
     if not os.path.exists(gamefile):
         print(

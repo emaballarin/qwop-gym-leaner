@@ -71,7 +71,7 @@ class RecordWrapper(gym.Wrapper):
 
     def close(self):
         """Close the recording file and clean up resources."""
-        if hasattr(self, 'handle') and self.handle and not self.handle.closed:
+        if hasattr(self, "handle") and self.handle and not self.handle.closed:
             self.handle.flush()
             self.handle.close()
         super().close()

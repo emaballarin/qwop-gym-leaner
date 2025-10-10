@@ -55,9 +55,7 @@ class WSServer:
     ):
         seedmin = -9007199254740991  # js Number.MIN_SAFE_INTEGER
         seedmax = 9007199254740991  # js Number.MAX_SAFE_INTEGER
-        assert (
-            seed >= seedmin and seed <= seedmax
-        ), f"seed must be between {seedmin} and {seedmax}"
+        assert seed >= seedmin and seed <= seedmax, f"seed must be between {seedmin} and {seedmax}"
 
         self.sock = sock
         self.seed = seed

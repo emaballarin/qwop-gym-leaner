@@ -45,9 +45,7 @@ def register_env(env_kwargs={}, env_wrappers=[]):
 
         return env
 
-    gym.envs.register(
-        id="local/QWOP-v1", entry_point=wrapped_env_creator, kwargs=env_kwargs
-    )
+    gym.envs.register(id="local/QWOP-v1", entry_point=wrapped_env_creator, kwargs=env_kwargs)
 
 
 def gen_seed():
