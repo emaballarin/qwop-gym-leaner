@@ -3,7 +3,7 @@ requires = ["setuptools>=61.0"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "qwop-gym"
+name = "qwop-gym-leaner"
 version = "1.1.0"
 authors = [
     { name="Simeon Manolov", email="s.manolloff@gmail.com" },
@@ -43,11 +43,11 @@ dependencies = [
 ]
 
 [project.urls]
-"Homepage" = "https://github.com/emaballarin/qwop-gym"
-"Bug Tracker" = "https://github.com/emaballarin/qwop-gym/issues"
+"Homepage" = "https://github.com/emaballarin/qwop-gym-leaner"
+"Bug Tracker" = "https://github.com/emaballarin/qwop-gym-leaner/issues"
 
 [project.scripts]
-"qwop-gym" = "qwop_gym.tools.main:main"
+"qwop-gym-leaner" = "qwop_gym.tools.main:main"
 
 [tool.setuptools.packages.find]
 where = ["."]

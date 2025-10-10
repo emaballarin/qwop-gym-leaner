@@ -132,8 +132,8 @@ def bootstrap():
 
 To finish setup, run the following command:
 
-    curl -sL https://www.foddy.net/QWOP.min.js | qwop-gym patch
+    curl -sL https://www.foddy.net/QWOP.min.js | qwop-gym-leaner patch
 
-or you can save QWOP.min.js locally and run `qwop-gym patch QWOP.min.js`.
+or you can save QWOP.min.js locally and run `qwop-gym-leaner patch QWOP.min.js`.
 """
         )

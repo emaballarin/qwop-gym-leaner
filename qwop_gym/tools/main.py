@@ -185,7 +185,7 @@ def ensure_sb3_installed():
             """
 To use this feature, install the "sb3" optional dependencies:
 
-    pip install qwop-gym[sb3]
+    pip install qwop-gym-leaner[sb3]
 """
         )
         sys.exit(1)
@@ -199,7 +199,7 @@ def ensure_imitation_installed():
             """
 To use this feature, install the "imitation" optional dependencies:
 
-    pip install qwop-gym[imitation]
+    pip install qwop-gym-leaner[imitation]
 """
         )
         sys.exit(1)
@@ -243,7 +243,7 @@ def ensure_patched(progname):
 Could not find patched QWOP.min.js.
 To patch QWOP.min.js, please run this command in your terminal:
 
-    curl -sL https://www.foddy.net/QWOP.min.js | qwop-gym patch
+    curl -sL https://www.foddy.net/QWOP.min.js | qwop-gym-leaner patch
 """
     )
 

@@ -88,7 +88,7 @@ class WSServer:
         if not os.path.exists(path):
             msg = """
 Could not find patched QWOP.min.js. To fix this error, run the command:
-curl -sL https://www.foddy.net/QWOP.min.js | qwop-gym patch
+curl -sL https://www.foddy.net/QWOP.min.js | qwop-gym-leaner patch
 """
 
             raise Exception(msg)
@@ -313,7 +313,7 @@ if __name__ == "__main__":
         manual_client=True,
         seed=0,
         browser="/Applications/Brave Browser.app/Contents/MacOS/Brave Browser",
-        driver="/Users/simo/Projects/qwop-gym/vendor/chromedriver",
+        driver="/Users/simo/Projects/qwop-gym-leaner/vendor/chromedriver",
     )
 
     with ws.sock:

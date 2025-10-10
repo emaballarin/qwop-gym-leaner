@@ -25,13 +25,13 @@ You should also check this [video](https://www.youtube.com/watch?v=2qNKjRwcx74) 
 1. Install [Python](https://www.python.org/downloads/) 3.10 or higher
 1. Install a chrome-based web browser (Google Chrome, Brave, Chromium, etc.)
 1. Download [chromedriver](https://googlechromelabs.github.io/chrome-for-testing/) 116.0 or higher
-1. Install the `qwop-gym` package and patch QWOP.min.js from your terminal:
+1. Install the `qwop-gym-leaner` package and patch QWOP.min.js from your terminal:
 
 ```bash
-pip install qwop-gym
+pip install qwop-gym-leaner
 
 # Fetch & patch QWOP source code
-curl -sL https://www.foddy.net/QWOP.min.js | qwop-gym patch
+curl -sL https://www.foddy.net/QWOP.min.js | qwop-gym-leaner patch
 ```
 
 Create an instance in your code:
@@ -42,28 +42,28 @@ import qwop_gym
 env = gym.make("QWOP-v1", browser="/browser/path", driver="/driver/path")
 ```
 
-## The `qwop-gym` tool
+## The `qwop-gym-leaner` tool
 
-The `qwop-gym` executable is a handy command-line tool which makes it easy to
+The `qwop-gym-leaner` executable is a handy command-line tool which makes it easy to
 play, record and replay episodes, train agents and more.
 
 Firstly, perform the initial setup:
 
 ```
-qwop-gym bootstrap
+qwop-gym-leaner bootstrap
 ```
 
 Play the game (use Q, W, O, P keys):
 
 ```bash
-qwop-gym play
+qwop-gym-leaner play
 ```
 
 Explore the other available commands:
 
 ```bash
-$ qwop-gym -h
-usage: qwop-gym [options] <action>
+$ qwop-gym-leaner -h
+usage: qwop-gym-leaner [options] <action>
 
 options:
   -h, --help  show this help message and exit
@@ -85,14 +85,14 @@ action:
   help              print this help message
 
 examples:
-  qwop-gym play
-  qwop-gym -c config/record.yml play
+  qwop-gym-leaner play
+  qwop-gym-leaner -c config/record.yml play
 ```
 
 For example, to train a PPO agent, edit [`config/ppo.yml`](./config/ppo.yml) and run:
 
 ```bash
-python qwop-gym train_ppo
+python qwop-gym-leaner train_ppo
 ```
 
 > [!WARNING]
@@ -108,7 +108,7 @@ tensorboard --logdir data/
 Configure `model_file` in [`config/spectate.yml`](./config/spectate.yml) and watch your trained agent play the game:
 
 ```bash
-python qwop-gym spectate
+python qwop-gym-leaner spectate
 ```
 
 ### Imitation
@@ -118,7 +118,7 @@ python qwop-gym spectate
 > [`imitation`](https://github.com/HumanCompatibleAI/imitation) library, which
 > depends on the deprecated `gym` library which makes it incompatible with
 > QwopEnv. This can be resolved as soon as `imitation` introduces support for
-> `gymnasium`. As a workaround, you can checkout the `qwop-gym` project
+> `gymnasium`. As a workaround, you can checkout the `qwop-gym-leaner` project
 > locally and use the `gym-compat` branch instead.
 
 ```bash
@@ -135,13 +135,13 @@ curl -sL https://www.foddy.net/QWOP.min.js | python -m src.game.patcher
 For imitation learning, first record some of your own games:
 
 ```bash
-python qwop-gym.py play -c config/record.yml
+python qwop-gym-leaner.py play -c config/record.yml
 ```
 
 Train an imitator via [Behavioral Cloning](https://imitation.readthedocs.io/en/latest/tutorials/1_train_bc.html):
 
 ```bash
-python qwop-gym.py train_bc
+python qwop-gym-leaner.py train_bc
 ```
 
 ### W&B sweeps
@@ -161,7 +161,7 @@ wandb agent <username>/qwop/<sweep>
 ```
 
 You can check out my W&B public QWOP project
-[here](https://wandb.ai/s-manolloff/qwop-gym).
+[here](https://wandb.ai/s-manolloff/qwop-gym-leaner).
 There you can find pre-trained model artifacts (zip files) of some
 well-performing agents, as well as see how they compare to each other. This
 [youtube video](https://www.youtube.com/watch?v=2qNKjRwcx74) showcases some of
@@ -182,7 +182,7 @@ Details about the QWOP game can be found [here](./doc/game.md)
 - https://github.com/juanto121/qwop-ai
 - https://github.com/ShawnHymel/qwop-ai
 
-In comparison, qwop-gym offers several key features:
+In comparison, qwop-gym-leaner offers several key features:
 
 - the env is _performant_ - perfect for on-policy algorithms as observations
   can be collected at great speeds (more than 2000 observations/sec on an Apple
@@ -196,10 +196,10 @@ In comparison, qwop-gym offers several key features:
   allow only the "useful" 8 key combinations.
 - great results (fast, human-like running) achieved by RL agents trained
   entirely through self-play, without pre-recorded expert demonstrations
-- qwop-gym already contains scripts for training with 8 different algorithms
+- qwop-gym-leaner already contains scripts for training with 8 different algorithms
   and adding more to the list is simple - this makes it suitable for exploring
   and/or benchmarking a variety of RL algorithms.
-- qwop-gym uses reliable open-source implementations of RL algorithms in
+- qwop-gym-leaner uses reliable open-source implementations of RL algorithms in
   contrast to many other projects using "roll-your-own" implementations.
 - QWOP's original JS source code is barely modified: 99% of all extra
   functionality is designed as a plugin, bundled separately and only a "diff"
