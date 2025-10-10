@@ -33,7 +33,7 @@ classifiers = [
 ]
 dependencies = [
     "gymnasium ~= 0.29.1",
-    "websockets ~= 11.0",
+    "websockets >= 11,< 16",
     "numpy ~= 1.24",
     "selenium ~= 4.11",
     "pillow ~= 10.0",
