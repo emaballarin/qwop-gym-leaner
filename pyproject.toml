@@ -1,52 +1,52 @@
 [build-system]
-requires = ["setuptools>=61.0"]
-build-backend = "setuptools.build_meta"
+    build-backend = "setuptools.build_meta"
+    requires = ["setuptools>=61.0"]
 
 [project]
-name = "qwop-gym-leaner"
-version = "1.1.0"
-authors = [
-    { name="Simeon Manolov", email="s.manolloff@gmail.com" },
-    { name="Emanuele Ballarin", email="emanuele@ballarin.cc" },
-]
+    authors = [
+        { name = "Emanuele Ballarin", email = "emanuele@ballarin.cc" },
+        { name = "Simeon Manolov", email = "s.manolloff@gmail.com" },
+    ]
+    name = "qwop-gym-leaner"
+    version = "1.1.0"
 
-description = "A Gymnasium environment for Benett Foddy's game QWOP, made leaner!"
-readme = "README.md"
-license = {text = "Apache License v2.0"}
-requires-python = ">=3.11"
-keywords = [
-    "gym",
-    "gymnasium",
-    "Reinforcement Learning",
-    "AI",
-    "game",
-    "QWOP",
-    "Farama-Foundation"
-]
-classifiers = [
-    "Programming Language :: Python :: 3",
-    "Programming Language :: JavaScript",
-    "License :: OSI Approved :: Apache Software License",
-    "Operating System :: OS Independent",
-    "Topic :: Education",
-    "Topic :: Games/Entertainment",
-    "Topic :: Scientific/Engineering :: Artificial Intelligence",
-]
-dependencies = [
-    "gymnasium >= 0.29.1",
-    "websockets >= 15.0",
-    "numpy >= 1.24.3",
-    "selenium >= 4.11.2",
-    "pyyaml >= 6.0",
-]
+    classifiers = [
+        "License :: OSI Approved :: Apache Software License",
+        "Operating System :: OS Independent",
+        "Programming Language :: JavaScript",
+        "Programming Language :: Python :: 3",
+        "Topic :: Education",
+        "Topic :: Games/Entertainment",
+        "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    ]
+    dependencies = [
+        "gymnasium >= 0.29.1",
+        "numpy >= 1.24.3",
+        "pyyaml >= 6.0",
+        "selenium >= 4.11.2",
+        "websockets >= 15.0",
+    ]
+    description = "A Gymnasium environment for Benett Foddy's game QWOP, made leaner!"
+    keywords = [
+        "AI",
+        "Farama-Foundation",
+        "QWOP",
+        "Reinforcement Learning",
+        "game",
+        "gym",
+        "gymnasium",
+    ]
+    license = { text = "Apache License v2.0" }
+    readme = "README.md"
+    requires-python = ">=3.11"
 
 [project.urls]
-"Homepage" = "https://github.com/emaballarin/qwop-gym-leaner"
-"Bug Tracker" = "https://github.com/emaballarin/qwop-gym-leaner/issues"
+    "Bug Tracker" = "https://github.com/emaballarin/qwop-gym-leaner/issues"
+    "Homepage" = "https://github.com/emaballarin/qwop-gym-leaner"
 
 [project.scripts]
-"qwop-gym-leaner" = "qwop_gym.tools.main:main"
+    "qwop-gym-leaner" = "qwop_gym_leaner.tools.main:main"
 
 [tool.setuptools.packages.find]
-where = ["."]
-include = ["qwop_gym*"]
+    include = ["qwop_gym_leaner*"]
+    where = ["."]

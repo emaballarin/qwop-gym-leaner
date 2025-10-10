@@ -1,5 +1,7 @@
 # =============================================================================
-# Copyright 2023 Simeon Manolov <s.manolloff@gmail.com>.  All rights reserved.
+# Copyright 2023 Simeon Manolov <s.manolloff@gmail.com>.
+#           2025 Emanuele Ballarin <emanuele@ballarin.cc>
+# All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -13,12 +15,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # =============================================================================
-
-import sys
+import argparse
 import os
 import pathlib
+import sys
+
 import yaml
-import argparse
 
 from . import common
 

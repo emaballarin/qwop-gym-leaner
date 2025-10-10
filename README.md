@@ -37,7 +37,7 @@ curl -sL https://www.foddy.net/QWOP.min.js | qwop-gym-leaner patch
 Create an instance in your code:
 
 ```python
-import qwop_gym
+import qwop_gym_leaner
 
 env = gym.make("QWOP-v1", browser="/browser/path", driver="/driver/path")
 ```
@@ -177,10 +177,10 @@ Details about the QWOP game can be found [here](./doc/game.md)
 
 ## Similar projects
 
-- https://github.com/Wesleyliao/QWOP-RL
-- https://github.com/drakesvoboda/RL-QWOP
-- https://github.com/juanto121/qwop-ai
-- https://github.com/ShawnHymel/qwop-ai
+- <https://github.com/Wesleyliao/QWOP-RL>
+- <https://github.com/drakesvoboda/RL-QWOP>
+- <https://github.com/juanto121/qwop-ai>
+- <https://github.com/ShawnHymel/qwop-ai>
 
 In comparison, qwop-gym-leaner offers several key features:
 

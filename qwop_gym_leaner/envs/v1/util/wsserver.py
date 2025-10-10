@@ -1,5 +1,7 @@
 # =============================================================================
-# Copyright 2023 Simeon Manolov <s.manolloff@gmail.com>.  All rights reserved.
+# Copyright 2023 Simeon Manolov <s.manolloff@gmail.com>.
+#           2025 Emanuele Ballarin <emanuele@ballarin.cc>
+# All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -13,22 +15,23 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # =============================================================================
-
-import signal
-import uuid
-import socket
 import asyncio
-import pathlib
-import websockets
-import sys
-import os
-import urllib.parse
 import logging
+import os
+import pathlib
+import signal
+import socket
+import sys
+import urllib.parse
+import uuid
+
+import websockets
 from selenium import webdriver
 from selenium.webdriver.chrome.service import Service as ChromeService
 
-from .wsproto import WSProto, to_bytes
 from .log import Log
+from .wsproto import to_bytes
+from .wsproto import WSProto
 
 
 class Peer:

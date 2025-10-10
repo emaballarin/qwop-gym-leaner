@@ -1,2 +1,2 @@
-graft qwop_gym
+graft qwop_gym_leaner
 global-exclude *.pyc

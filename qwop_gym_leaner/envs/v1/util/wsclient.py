@@ -1,5 +1,7 @@
 # =============================================================================
-# Copyright 2023 Simeon Manolov <s.manolloff@gmail.com>.  All rights reserved.
+# Copyright 2023 Simeon Manolov <s.manolloff@gmail.com>.
+#           2025 Emanuele Ballarin <emanuele@ballarin.cc>
+# All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -13,13 +15,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # =============================================================================
+import struct
+import time
 
 import numpy as np
-import time
-import struct
 from websockets.sync import client
-from .wsproto import WSProto, to_bytes
+
 from .log import Log
+from .wsproto import to_bytes
+from .wsproto import WSProto
 
 
 class Shutdown(Exception):

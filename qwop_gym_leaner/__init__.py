@@ -1,5 +1,7 @@
 # =============================================================================
-# Copyright 2023 Simeon Manolov <s.manolloff@gmail.com>.  All rights reserved.
+# Copyright 2023 Simeon Manolov <s.manolloff@gmail.com>.
+#           2025 Emanuele Ballarin <emanuele@ballarin.cc>
+# All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -13,12 +15,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # =============================================================================
-
 import gymnasium
+
 from .envs.v1.qwop_env import QwopEnv
-from .wrappers.verbose_wrapper import VerboseWrapper
 from .wrappers.record_wrapper import RecordWrapper
+from .wrappers.verbose_wrapper import VerboseWrapper
 
 all = [QwopEnv, VerboseWrapper, RecordWrapper]
 
-gymnasium.register(id="QWOP-v1", entry_point="qwop_gym:QwopEnv")
+gymnasium.register(id="QWOP-v1", entry_point="qwop_gym_leaner:QwopEnv")

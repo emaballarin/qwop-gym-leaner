@@ -1,5 +1,7 @@
 # =============================================================================
-# Copyright 2023 Simeon Manolov <s.manolloff@gmail.com>.  All rights reserved.
+# Copyright 2023 Simeon Manolov <s.manolloff@gmail.com>.
+#           2025 Emanuele Ballarin <emanuele@ballarin.cc>
+# All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -13,21 +15,23 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # =============================================================================
-
-import socket
-import numpy as np
-import multiprocessing
-import gymnasium as gym
-import itertools
 import functools
-import struct
+import itertools
 import logging
+import multiprocessing
 import shutil
+import socket
+import struct
 
-from .util.wsproto import WSProto, to_bytes
-from .util.wsserver import WSServer
-from .util.wsclient import WSClient, WSClientMock
+import gymnasium as gym
+import numpy as np
+
 from .util.log import Log
+from .util.wsclient import WSClient
+from .util.wsclient import WSClientMock
+from .util.wsproto import to_bytes
+from .util.wsproto import WSProto
+from .util.wsserver import WSServer
 
 BYTES_RESET = to_bytes(WSProto.H_CMD) + to_bytes(WSProto.CMD_RST)
 BYTES_RELOAD = to_bytes(WSProto.H_RLD)
@@ -123,6 +127,7 @@ class QwopEnv(gym.Env):
         self.seedval = int(seedval)
 
         self.frames_per_step = frames_per_step
+        self.game_in_browser = game_in_browser
 
         if browser_mock:
             self.client = WSClientMock()
@@ -286,6 +291,10 @@ class QwopEnv(gym.Env):
 
     def _perform_action(self, action):
         cmdflags = WSProto.CMD_STP | self.action_cmdflags[action]
+
+        # Add draw flag if game rendering is enabled
+        if self.game_in_browser:
+            cmdflags |= WSProto.CMD_DRW
 
         data = (
             to_bytes(WSProto.H_CMD)
