@@ -33,27 +33,27 @@ error in the browser console - a WebSocket error which you can ignore.
 
 ## Keyboard controls
 
-| key | effect |
-|-----|--------|
-| QWOP | standard move commands |
-| T | terminate episode (restart) |
-| S | step (advance one timestep) |
-| D | draw (render) |
-| F | step, then draw |
+| key  | effect                      |
+| ---- | --------------------------- |
+| QWOP | standard move commands      |
+| T    | terminate episode (restart) |
+| S    | step (advance one timestep) |
+| D    | draw (render)               |
+| F    | step, then draw             |
 
 ## Configuration
 
 Passing the below options as url parameters will control various game aspects:
 
-| option | type | default | description |
-|--------|------|---------|-------------|
-| `port` | int | | WebSocket port to communicate with the RL env |
-| `seed` | int | | A seed for the game's random generator |
-| `intro` | bool | `true` | Enables the game intro screen |
-| `stepsize` | int | `1` | Number of updates per step |
-| `text` | string | | Static text to display |
-| `stat` | bool | `false` | Display a table with various env stats |
-| `game` | bool | `true` | Enables the game canvas itself * |
+| option     | type   | default | description                                   |
+| ---------- | ------ | ------- | --------------------------------------------- |
+| `port`     | int    |         | WebSocket port to communicate with the RL env |
+| `seed`     | int    |         | A seed for the game's random generator        |
+| `intro`    | bool   | `true`  | Enables the game intro screen                 |
+| `stepsize` | int    | `1`     | Number of updates per step                    |
+| `text`     | string |         | Static text to display                        |
+| `stat`     | bool   | `false` | Display a table with various env stats        |
+| `game`     | bool   | `true`  | Enables the game canvas itself \*             |
 
 \* Hiding the game is used during RL training, where no rendering occurs anyway
 

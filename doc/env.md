@@ -69,12 +69,13 @@ To perform an action:
 
 On each step, the browser sends the following data to the RL env:
 
-* game state (termination condition)
-* time elapsed (used in [reward](#rewards) calculations)
-* distance ran (used in [reward](#rewards) calculations)
-* body state
+- game state (termination condition)
+- time elapsed (used in [reward](#rewards) calculations)
+- distance ran (used in [reward](#rewards) calculations)
+- body state
 
 The body state contains data about the athlete's 12 body parts:
+
 - Torso
 - Head
 - Left Arm
@@ -90,13 +91,13 @@ The body state contains data about the athlete's 12 body parts:
 
 Each of those body parts is represented by 5 floats:
 
-|  #  | Description        | Min   | Max   | Unit        | Note
-|-----|--------------------|-------|-------|-------------|------------
-| 0   | position (x-axis)  | -10   | 1050  | decimeters  |
-| 1   | position (y-axis)  | -10   | 10    | decimeters  |
-| 2   | angle vs horizon   | -6    | 6     | radians     |
-| 3   | velocity (x-axis)  | -20   | 60    | ?           |
-| 4   | velocity (y-axis)  | -25   | 60    | ?           |
+| #   | Description       | Min | Max  | Unit       | Note |
+| --- | ----------------- | --- | ---- | ---------- | ---- |
+| 0   | position (x-axis) | -10 | 1050 | decimeters |
+| 1   | position (y-axis) | -10 | 10   | decimeters |
+| 2   | angle vs horizon  | -6  | 6    | radians    |
+| 3   | velocity (x-axis) | -20 | 60   | ?          |
+| 4   | velocity (y-axis) | -25 | 60   | ?          |
 
 This makes total of `60` floats for the body state, which are normalized and
 then returned as the `obs` (an `np.ndarray((60,), dtype=np.float32)`) element
@@ -125,20 +126,22 @@ R = C_s\frac{\Delta_s}{\Delta_t} - \frac{C_t}{C_f}\Delta_t
 ```
 
 where:
-* **R** is the reward
-* **Δ<sub>s</sub>** is the change in distance ran since last step
-* **Δ<sub>t</sub>** is the change in time elapsed since last step
-* **C<sub>s</sub>** is a constant (configurable via `speed_rew_mult`)
-* **C<sub>t</sub>** is a constant (configurable via `time_cost_mult`)
-* **C<sub>f</sub>** is a constant (configurable via `frames_per_step`)
+
+- **R** is the reward
+- **Δ<sub>s</sub>** is the change in distance ran since last step
+- **Δ<sub>t</sub>** is the change in time elapsed since last step
+- **C<sub>s</sub>** is a constant (configurable via `speed_rew_mult`)
+- **C<sub>t</sub>** is a constant (configurable via `time_cost_mult`)
+- **C<sub>f</sub>** is a constant (configurable via `frames_per_step`)
 
 ## 💀 <a id="termination"></a> Termination
 
 The env will terminate whenever the athlete:
-* _steps_ or _falls_ beyond the 100-meter mark (considered a success)
-* reaches the 105-meter mark (considered a success) *
-* falls anywhere else (considered a failure)
-* reaches the -10-meter mark (considered a failure)
+
+- _steps_ or _falls_ beyond the 100-meter mark (considered a success)
+- reaches the 105-meter mark (considered a success) \*
+- falls anywhere else (considered a failure)
+- reaches the -10-meter mark (considered a failure)
 
 \* In rare cases, the athlete goes past the finish line without the game
 detecting ground contact due to a bug, so a 105m end-game condition was added.
@@ -173,7 +176,6 @@ This env supports two reset modes: _soft_ and _hard_.
 
 In both cases, QwopEnv instance variables are reset and the difference lies in
 how QWOP reset is performed.
-
 
 ### Soft resets
 
@@ -226,49 +228,47 @@ sequence diagram below:
 
 ![QwopEnv bootstrap](./bootstrap.png)
 
-
 ### Communication protocol
 
 The env<->browser communication is governed by a protocol designed specifically
 for this purpose. It consists of a 1-byte header and variable-length payload,
 here are some examples:
 
-| Message description | byte 1 | byte 2 | bytes 3+ |
-|-------------|--------|--------|----------|
-| Registration request | `0` | (id) | |
-| Game command: "W" key | `3` | `0b00000101` | step (1 byte) + reward (4 bytes) + total_reward (4 bytes) |
-| Game command: restart game | `3` | `0b00100001` | |
-| Game command: take screenshot | `3` | `0b10000000` | |
-| Game response: observation | `4` | `0b00000000` | time (4 bytes) + distance (4 bytes) + body state (60 bytes) |
-| Game response: observation (game over) | `4` | `0b00000010` | time (4 bytes) + distance (4 bytes) + body state (60 bytes) |
-| Game response: screenshot (JPEG) | `5` | `0b00000000` | (image data) |
-| Game response: screenshot (PNG) | `5` | `0b00000001` | (image data) |
-| Log | `6` | (utf-8 text) | (utf-8 text - cont.) |
-| Error | `7` | (utf-8 text) | (utf-8 text - cont.) |
-| Reload page | `8` | | |
-
+| Message description                    | byte 1 | byte 2       | bytes 3+                                                    |
+| -------------------------------------- | ------ | ------------ | ----------------------------------------------------------- |
+| Registration request                   | `0`    | (id)         |                                                             |
+| Game command: "W" key                  | `3`    | `0b00000101` | step (1 byte) + reward (4 bytes) + total_reward (4 bytes)   |
+| Game command: restart game             | `3`    | `0b00100001` |                                                             |
+| Game command: take screenshot          | `3`    | `0b10000000` |                                                             |
+| Game response: observation             | `4`    | `0b00000000` | time (4 bytes) + distance (4 bytes) + body state (60 bytes) |
+| Game response: observation (game over) | `4`    | `0b00000010` | time (4 bytes) + distance (4 bytes) + body state (60 bytes) |
+| Game response: screenshot (JPEG)       | `5`    | `0b00000000` | (image data)                                                |
+| Game response: screenshot (PNG)        | `5`    | `0b00000001` | (image data)                                                |
+| Log                                    | `6`    | (utf-8 text) | (utf-8 text - cont.)                                        |
+| Error                                  | `7`    | (utf-8 text) | (utf-8 text - cont.)                                        |
+| Reload page                            | `8`    |              |                                                             |
 
 ## Configuration parameters
 
 Here you will find a list of all configuration parameters
 Various aspects of the env can be configured via the constructor arguments:
 
-| name | type | default | description |
-|------|------|---------|-------------|
-|`browser`|string|Path to the web browser binary|
-|`driver`|string||Path to the chromedriver binary|
-|`render_mode`|string||Supported render modes (either `browser` or `rgb_array`)|
-|`failure_cost`|number|`10`|Subtracted from the reward at the end of unsuccessful episodes|
-|`success_reward`|number|`50`|Added to the reward at the end of successful episodes|
-|`time_cost_mult`|number|`10`|Multiplier for the amount subtracted from the reward at each step|
-|`frames_per_step`|int|`1`|Number of frames to advance per call to `.step` (aka. _frameskip_)|
-|`stat_in_browser`|bool|`False`|Display various game stats in the browser next to the game area|
-|`game_in_browser`|bool|`True`|Display the game area itself in the browser|
-|`text_in_browser`|string||Display a static text next to the game area in the browser|
-|`reload_on_reset`|bool|`False`|Perform a page reload on each call to `.reset` (aka. "hard reset")|
-|`auto_draw`|bool|`False`|Automatically draw the current frame on each call to `.reset`|
-|`reduced_action_set`|bool|`False`|Reduce possible actions from 16 to just 9|
-|`t_for_terminate`|bool|`False`|Map an additional action to the T key for terminating the env|
-|`loglevel`|string|`WARN`|Logger level (DEBUG|INFO|WARN|ERROR)|
-|`seed`|int||Seed (must be between 0 and 2^31), auto-generated if blank|
-|`browser_mock`|bool|`False`|Used for debugging when no browser is needed|
+| name                 | type   | default                        | description                                                        |
+| -------------------- | ------ | ------------------------------ | ------------------------------------------------------------------ | ---- | ---- | ------ |
+| `browser`            | string | Path to the web browser binary |
+| `driver`             | string |                                | Path to the chromedriver binary                                    |
+| `render_mode`        | string |                                | Supported render modes (either `browser` or `rgb_array`)           |
+| `failure_cost`       | number | `10`                           | Subtracted from the reward at the end of unsuccessful episodes     |
+| `success_reward`     | number | `50`                           | Added to the reward at the end of successful episodes              |
+| `time_cost_mult`     | number | `10`                           | Multiplier for the amount subtracted from the reward at each step  |
+| `frames_per_step`    | int    | `1`                            | Number of frames to advance per call to `.step` (aka. _frameskip_) |
+| `stat_in_browser`    | bool   | `False`                        | Display various game stats in the browser next to the game area    |
+| `game_in_browser`    | bool   | `True`                         | Display the game area itself in the browser                        |
+| `text_in_browser`    | string |                                | Display a static text next to the game area in the browser         |
+| `reload_on_reset`    | bool   | `False`                        | Perform a page reload on each call to `.reset` (aka. "hard reset") |
+| `auto_draw`          | bool   | `False`                        | Automatically draw the current frame on each call to `.reset`      |
+| `reduced_action_set` | bool   | `False`                        | Reduce possible actions from 16 to just 9                          |
+| `t_for_terminate`    | bool   | `False`                        | Map an additional action to the T key for terminating the env      |
+| `loglevel`           | string | `WARN`                         | Logger level (DEBUG                                                | INFO | WARN | ERROR) |
+| `seed`               | int    |                                | Seed (must be between 0 and 2^31), auto-generated if blank         |
+| `browser_mock`       | bool   | `False`                        | Used for debugging when no browser is needed                       |

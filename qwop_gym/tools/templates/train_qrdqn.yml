@@ -29,18 +29,18 @@ n_checkpoints: 5
 # QRDQN algorithm parameters (used only if `model_load_file` is blank)
 # https://sb3-contrib.readthedocs.io/en/master/modules/qrdqn.html#sb3_contrib.qrdqn.QRDQN
 learner_kwargs:
-  policy: "MlpPolicy"
-  buffer_size: 100000
-  learning_starts: 100000
-  batch_size: 64
-  tau: 1.0
-  gamma: 0.995
-  train_freq: 4
-  gradient_steps: 1
-  target_update_interval: 100000
-  exploration_fraction: 0.5
-  exploration_initial_eps: 0.01
-  exploration_final_eps: 0
+    policy: "MlpPolicy"
+    buffer_size: 100000
+    learning_starts: 100000
+    batch_size: 64
+    tau: 1.0
+    gamma: 0.995
+    train_freq: 4
+    gradient_steps: 1
+    target_update_interval: 100000
+    exploration_fraction: 0.5
+    exploration_initial_eps: 0.01
+    exploration_final_eps: 0
 
 # (string) Schedule for the learning_rate as a function of the progress remaining.
 # Format is one of:
@@ -71,10 +71,10 @@ learner_lr_schedule: "const_0.003"
 # Keys listed here take precedence over keys loaded with __include__.
 # See notes in `env.yml` for more info
 env_kwargs:
-  __include__: "config/env.yml"
-  frames_per_step: 4
-  reduced_action_set: false
-  text_in_browser: "Do not close this window, training in progress..."
+    __include__: "config/env.yml"
+    frames_per_step: 4
+    reduced_action_set: false
+    text_in_browser: "Do not close this window, training in progress..."
 
 # List of gym wrappers to use for the env
 # Each list element must be a dict with "module", "cls" and "kwargs" keys

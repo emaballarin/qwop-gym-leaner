@@ -7,19 +7,19 @@ model_cls: "QRDQN"
 steps_per_step: 1
 
 env_kwargs:
-  __include__: "config/env.yml"
-  frames_per_step: 4
-  auto_draw: false
-  stat_in_browser: false
-  game_in_browser: false
-  text_in_browser: "Recording an AI playing"
+    __include__: "config/env.yml"
+    frames_per_step: 4
+    auto_draw: false
+    stat_in_browser: false
+    game_in_browser: false
+    text_in_browser: "Recording an AI playing"
 
 env_wrappers:
-  - module: "qwop_gym"
-    cls: "RecordWrapper"
-    kwargs:
-      rec_file: "data/recordings/1syeor3a-12000000.rec"
-      overwrite: true
-      max_time: 6
-      min_distance: 100
-      complete_only: true
+    - module: "qwop_gym"
+      cls: "RecordWrapper"
+      kwargs:
+          rec_file: "data/recordings/1syeor3a-12000000.rec"
+          overwrite: true
+          max_time: 6
+          min_distance: 100
+          complete_only: true

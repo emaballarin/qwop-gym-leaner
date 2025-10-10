@@ -27,8 +27,8 @@ limitations under the License.
  * @return {boolean}
  */
 function urlparam_bool(name, fallback) {
-    const v = (new URLSearchParams(window.location.search)).get(name);
-    return v === null ? fallback : (v === "1" || v === "true");
+    const v = new URLSearchParams(window.location.search).get(name);
+    return v === null ? fallback : v === "1" || v === "true";
 }
 
 /**
@@ -38,7 +38,7 @@ function urlparam_bool(name, fallback) {
  * @return {int}
  */
 function urlparam_int(name, fallback) {
-    const v = (new URLSearchParams(window.location.search)).get(name);
+    const v = new URLSearchParams(window.location.search).get(name);
     return v === null ? fallback : parseInt(v);
 }
 
@@ -49,42 +49,42 @@ function urlparam_int(name, fallback) {
  * @return {string}
  */
 function urlparam_string(name, fallback) {
-    const v = (new URLSearchParams(window.location.search)).get(name);
+    const v = new URLSearchParams(window.location.search).get(name);
     return v === null ? fallback : v;
 }
 
 const CONFIG = {
     // WebSocket port to communicate with the RL env
-    "port": urlparam_int("port"),
+    port: urlparam_int("port"),
 
     // Seed for Math.random()
-    "seed": urlparam_int("seed"),
+    seed: urlparam_int("seed"),
 
     // Show intro screen (use "false" for RL)
-    "intro": urlparam_bool("intro", true),
+    intro: urlparam_bool("intro", true),
 
     // Number of updates per step
-    "stepsize": urlparam_int("stepsize", 1),
+    stepsize: urlparam_int("stepsize", 1),
 
     // Text to display
-    "text": urlparam_string("text", ""),
+    text: urlparam_string("text", ""),
 
     // Display various game stats on each step (use "true" for debugging)
-    "stat": urlparam_bool("stat", false),
+    stat: urlparam_bool("stat", false),
 
     // Display the game window itself
-    "game": urlparam_bool("game", true),
-}
+    game: urlparam_bool("game", true),
+};
 
 /** Advances N timesteps in the game. */
-function FN_STEP () {
-    for (let i=CONFIG.stepsize; i--; ) {
+function FN_STEP() {
+    for (let i = CONFIG.stepsize; i--; ) {
         CORE.game.update(TIMESTEP_SIZE);
     }
 }
 
 /** Renders the current frame. */
-function FN_DRAW () {
+function FN_DRAW() {
     CORE.app.host.emitter.emit(4);
     CORE.app.host.on_internal_render();
 }
@@ -138,13 +138,13 @@ const OBS_PARTS = [
     "rightFoot",
     "rightForearm",
     "rightThigh",
-]
+];
 
 function FN_OBSERVATION() {
-    const bodyparts = OBS_PARTS.map((p) => CORE.game[p])
+    const bodyparts = OBS_PARTS.map((p) => CORE.game[p]);
 
     // 2 headers, time(float32), distance(float32), parts*(5*float32)
-    const nbytes = 2 + 4 + 4 + OBS_PARTS.length*5*4
+    const nbytes = 2 + 4 + 4 + OBS_PARTS.length * 5 * 4;
     const dv = new DataView(new ArrayBuffer(nbytes));
 
     dv.setUint8(0, WS.H_OBS);
@@ -154,7 +154,7 @@ function FN_OBSERVATION() {
     //       lands (it exits the world boundaries at 110+m)
     //       => report 105+m as a success
     let byte1 = 0;
-    const time = CORE.game.scoreTime / 10
+    const time = CORE.game.scoreTime / 10;
     const distance = CORE.game.torso._components.get("physicsBody").getPosition().x / 10;
 
     if (CORE.game.gameEnded || distance < -10 || distance > 105) {
@@ -174,27 +174,33 @@ function FN_OBSERVATION() {
         const ang = b.getAngle();
         const vel = b.getLinearVelocity();
 
-        dv.setFloat32(byte, pos.x, LE), byte+=4;
-        dv.setFloat32(byte, pos.y, LE), byte+=4
-        dv.setFloat32(byte, ang, LE), byte+=4
-        dv.setFloat32(byte, vel.x, LE), byte+=4
-        dv.setFloat32(byte, vel.y, LE), byte+=4
+        (dv.setFloat32(byte, pos.x, LE), (byte += 4));
+        (dv.setFloat32(byte, pos.y, LE), (byte += 4));
+        (dv.setFloat32(byte, ang, LE), (byte += 4));
+        (dv.setFloat32(byte, vel.x, LE), (byte += 4));
+        (dv.setFloat32(byte, vel.y, LE), (byte += 4));
     }
 
-    return dv
+    return dv;
 }
 
 /** Formats seconds into MM:SS.NNN format */
 function toclock(s) {
-    return Math.trunc(s / 60).toString().padStart(2, '0') + ":" +
-        Math.trunc(s % 60).toString().padStart(2, '0') + "." +
-        (s - Math.trunc(s)).toString().slice(2,3);
+    return (
+        Math.trunc(s / 60)
+            .toString()
+            .padStart(2, "0") +
+        ":" +
+        Math.trunc(s % 60)
+            .toString()
+            .padStart(2, "0") +
+        "." +
+        (s - Math.trunc(s)).toString().slice(2, 3)
+    );
 }
-
 
 /** Visualizes game stats on each step. */
 function FN_UPDATE_STATS(dv_in, dv_out) {
-
     if (dv_in) {
         if (dv_in.getUint8(1) & WS.CMD_RST) {
             DISTANCE_BUFFER.splice(0, DISTANCE_BUFFER.length);
@@ -217,7 +223,7 @@ function FN_UPDATE_STATS(dv_in, dv_out) {
     const floats = new Float32Array(dv_out.buffer.slice(2));
 
     const game_time = toclock(floats[0]);
-    const real_time = toclock(((new Date()) - START_TIME) / 1000);
+    const real_time = toclock((new Date() - START_TIME) / 1000);
     document.getElementById("cell-game_time").textContent = game_time;
     document.getElementById("cell-real_time").textContent = real_time;
 
@@ -225,15 +231,15 @@ function FN_UPDATE_STATS(dv_in, dv_out) {
     document.getElementById("cell-distance").textContent = `${distance.toFixed(1)} m`;
 
     if (DISTANCE_BUFFER.length < DISTANCE_BUFFER_SIZE) {
-        DISTANCE_BUFFER.push(distance)
+        DISTANCE_BUFFER.push(distance);
     } else {
-        DISTANCE_BUFFER.splice(DISTANCE_BUFFER_SIZE - 1, 1)
-        DISTANCE_BUFFER.unshift(distance)
+        DISTANCE_BUFFER.splice(DISTANCE_BUFFER_SIZE - 1, 1);
+        DISTANCE_BUFFER.unshift(distance);
     }
 
     const ds = DISTANCE_BUFFER[0] - DISTANCE_BUFFER[DISTANCE_BUFFER.length - 1];
     const dt = TIMESTEP_SIZE * CONFIG.stepsize * (DISTANCE_BUFFER.length - 1);
-    const v = 10 * ds / (dt || 1);
+    const v = (10 * ds) / (dt || 1);
 
     document.getElementById("cell-avg_speed").textContent = `${v.toFixed(1)} m/s`;
 
@@ -242,10 +248,10 @@ function FN_UPDATE_STATS(dv_in, dv_out) {
     for (const partname of OBS_PARTS) {
         let cells = document.getElementById(`row-${partname}`).children;
         cells[1].textContent = floats[i].toFixed(1);
-        cells[2].textContent = floats[i+1].toFixed(1);
-        cells[3].textContent = floats[i+2].toFixed(1);
-        cells[4].textContent = floats[i+3].toFixed(1);
-        cells[5].textContent = floats[i+4].toFixed(1);
+        cells[2].textContent = floats[i + 1].toFixed(1);
+        cells[3].textContent = floats[i + 2].toFixed(1);
+        cells[4].textContent = floats[i + 3].toFixed(1);
+        cells[5].textContent = floats[i + 4].toFixed(1);
         i += 5;
     }
 }
@@ -262,7 +268,7 @@ let START_TIME;
 
 // affects the calculation of the elapsed time
 // (usually displayed after finishing)
-const TIMESTEP_SIZE = .03333333333333333;
+const TIMESTEP_SIZE = 0.03333333333333333;
 
 // for calculating average speeds
 // (displayed in stats table)
@@ -277,7 +283,7 @@ const CORE = QWOP.__i.Luxe.core;
 const SNOW_CORE = QWOP.__i["snow.Snow"].core;
 
 // boolean indicator for little-endian
-const LE = new Float32Array([1])[0] === (new DataView((new Float32Array([1])).buffer)).getFloat32(0, true)
+const LE = new Float32Array([1])[0] === new DataView(new Float32Array([1]).buffer).getFloat32(0, true);
 
 // convenience functions for easier debugging
 const FN_KEYDOWN = CORE.app.input.module.on_keydown.bind(CORE.app.input.module);
@@ -302,22 +308,22 @@ const ws = new WS(
 );
 
 const _oninputup = CORE.game.oninputup.bind(CORE.game);
-CORE.game.oninputup = function(t) {
-    switch(t) {
-    case "stepdraw":
-        return FN_STEP_AND_DRAW();
-    case "step":
-        return FN_STEP();
-    case "draw":
-        return FN_DRAW();
-    case "reset":
-        return FN_RESET();
-    case "escape":
-        return FN_QUIT();
-    default:
-        _oninputup(t);
+CORE.game.oninputup = function (t) {
+    switch (t) {
+        case "stepdraw":
+            return FN_STEP_AND_DRAW();
+        case "step":
+            return FN_STEP();
+        case "draw":
+            return FN_DRAW();
+        case "reset":
+            return FN_RESET();
+        case "escape":
+            return FN_QUIT();
+        default:
+            _oninputup(t);
     }
-}
+};
 
 CORE.app.window.handle.addEventListener("doneLoading", (_e) => {
     SNOW_CORE.__manual_mode = true;

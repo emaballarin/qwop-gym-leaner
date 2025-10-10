@@ -4,15 +4,16 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "qwop-gym"
-version = "1.0.1"
+version = "1.1.0"
 authors = [
     { name="Simeon Manolov", email="s.manolloff@gmail.com" },
+    { name="Emanuele Ballarin", email="emanuele@ballarin.cc" },
 ]
 
-description = "A Gymnasium environment for Benett Foddy's game QWOP"
+description = "A Gymnasium environment for Benett Foddy's game QWOP, made leaner!"
 readme = "README.md"
 license = {text = "Apache License v2.0"}
-requires-python = ">=3.10"
+requires-python = ">=3.11"
 keywords = [
     "gym",
     "gymnasium",
@@ -32,38 +33,22 @@ classifiers = [
     "Topic :: Scientific/Engineering :: Artificial Intelligence",
 ]
 dependencies = [
-    "gymnasium ~= 0.29.1",
-    "websockets ~= 11.0",
-    "numpy ~= 1.24",
-    "selenium ~= 4.11",
-    "pillow ~= 10.0",
-    "pygame ~= 2.5",
+    "gymnasium >= 0.29.1",
+    "websockets >= 11.0",
+    "numpy >= 1.24",
+    "selenium >= 4.11",
+    "pillow >= 10.0",
+    "pygame >= 2.5",
     "pyyaml >= 6.0",
 ]
 
-[project.optional-dependencies]
-sb3 = [
-    "stable_baselines3 ~= 2.1",
-    "sb3-contrib ~= 2.1",
-    "tensorboard",
-    "tensorflow",
-    "tqdm",
-    "rich",
-]
-
-# Disabled until imitation supports gymnasium
-#imitation = ["imitation"]
-
 [project.urls]
-"Homepage" = "https://github.com/smanolloff/qwop-gym"
-"Bug Tracker" = "https://github.com/smanolloff/qwop-gym/issues"
+"Homepage" = "https://github.com/emaballarin/qwop-gym"
+"Bug Tracker" = "https://github.com/emaballarin/qwop-gym/issues"
 
 [project.scripts]
 "qwop-gym" = "qwop_gym.tools.main:main"
 
-# [tool.setuptools]
-# packages = ["qwop_gym", ]
-
 [tool.setuptools.packages.find]
 where = ["."]
-include = ["qwop_gym*"]  # alternatively: `exclude = ["additional*"]`
+include = ["qwop_gym*"]

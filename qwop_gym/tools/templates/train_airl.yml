@@ -8,8 +8,8 @@ run_id: ~
 # [List<string>] List of paths for the recordings to train with
 # Glob patterns are supported, eg. "data/recordings/*.rec"
 recordings:
-  - "data/recordings/20230907225035-1718668468.rec"
-  - "data/recordings/20230908182933-1666369655.rec"
+    - "data/recordings/20230907225035-1718668468.rec"
+    - "data/recordings/20230908182933-1666369655.rec"
 
 # [string] Directory template to save the trained model, metadata and
 # tensorboard logs. If the template contains {run_id} or {seed} placeholders,
@@ -29,14 +29,14 @@ total_timesteps: 2000
 # AIRL algorithm parameters
 # https://imitation.readthedocs.io/en/latest/algorithms/gail.html#api
 trainer_kwargs:
-  demo_batch_size: 1024
-  demo_minibatch_size: ~
-  n_disc_updates_per_round: 4
-  log_dir: ~
-  gen_train_timesteps: ~
-  gen_replay_buffer_capacity: ~
-  debug_use_ground_truth: false
-  allow_variable_horizon: false
+    demo_batch_size: 1024
+    demo_minibatch_size: ~
+    n_disc_updates_per_round: 4
+    log_dir: ~
+    gen_train_timesteps: ~
+    gen_replay_buffer_capacity: ~
+    debug_use_ground_truth: false
+    allow_variable_horizon: false
 
 # [string] Module name of the learner alrogirthm (eg. "stable_baselines3")
 learner_module: "stable_baselines3"
@@ -46,18 +46,18 @@ learner_cls: "PPO"
 
 # Parameters for the learner algorithm
 learner_kwargs:
-  policy: "MlpPolicy"
-  use_sde: false
-  sde_sample_freq: 4
-  n_steps: 64
-  batch_size: 32
-  gamma: 0.9
-  gae_lambda: 0.98
-  clip_range: 0.4
-  normalize_advantage: true
-  ent_coef: 0.001
-  vf_coef: 0.5
-  max_grad_norm: 3
+    policy: "MlpPolicy"
+    use_sde: false
+    sde_sample_freq: 4
+    n_steps: 64
+    batch_size: 32
+    gamma: 0.9
+    gae_lambda: 0.98
+    clip_range: 0.4
+    normalize_advantage: true
+    ent_coef: 0.001
+    vf_coef: 0.5
+    max_grad_norm: 3
 
 # (string) Schedule for the learning_rate as a function of the progress remaining.
 # Format is one of:
@@ -88,10 +88,10 @@ learner_lr_schedule: "const_0.001"
 # Keys listed here take precedence over keys loaded with __include__.
 # See notes in `env.yml` for more info
 env_kwargs:
-  __include__: "config/env.yml"
-  frames_per_step: 4
-  reduced_action_set: false
-  text_in_browser: "Do not close this window, training in progress..."
+    __include__: "config/env.yml"
+    frames_per_step: 4
+    reduced_action_set: false
+    text_in_browser: "Do not close this window, training in progress..."
 
 # List of gym wrappers to use for the env
 # Each list element must be a dict with "module", "cls" and "kwargs" keys

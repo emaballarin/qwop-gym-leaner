@@ -1,3 +1,2 @@
-include LICENSE
 graft qwop_gym
-global-exclude QWOP.min.js *.pyc
+global-exclude *.pyc
