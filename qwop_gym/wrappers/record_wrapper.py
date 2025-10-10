@@ -43,12 +43,8 @@ class RecordWrapper(gym.Wrapper):
         if terminated:
             ep_info = "episode with time=%.2f" % info["time"]
             ep_info += " and distance=%.2f" % info["distance"]
-            incomplete = action == self.env.unwrapped.action_t
 
-            if incomplete:
-                print("Discarded %s (incomplete)" % ep_info)
-                self.discarded_episodes.append(self.actions)
-            elif info["time"] > self.max_time:
+            if info["time"] > self.max_time:
                 print("Discarded %s (max_time exceeded)" % ep_info)
                 self.discarded_episodes.append(self.actions)
             elif info["distance"] < self.min_distance:
@@ -65,14 +61,17 @@ class RecordWrapper(gym.Wrapper):
                     self.discarded_episodes = []
 
                 self.handle.write("\n".join(self.actions) + "\n*\n")
-
-                if incomplete:
-                    print("Recorded incomplete %s" % ep_info)
-                else:
-                    print("Recorded %s" % ep_info)
+                print("Recorded %s" % ep_info)
 
             self.actions = []
         elif info.get("manual_restart"):
             self.actions = []
 
         return obs, reward, terminated, truncated, info
+
+    def close(self):
+        """Close the recording file and clean up resources."""
+        if hasattr(self, 'handle') and self.handle and not self.handle.closed:
+            self.handle.flush()
+            self.handle.close()
+        super().close()

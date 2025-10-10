@@ -20,9 +20,6 @@ import multiprocessing
 import gymnasium as gym
 import itertools
 import functools
-import PIL
-import PIL.Image
-import io
 import struct
 import logging
 
@@ -32,12 +29,8 @@ from .util.wsclient import WSClient, WSClientMock
 from .util.log import Log
 
 BYTES_RESET = to_bytes(WSProto.H_CMD) + to_bytes(WSProto.CMD_RST)
-BYTES_DRAW = to_bytes(WSProto.H_CMD) + to_bytes(WSProto.CMD_DRW)
-BYTES_RENDER = to_bytes(WSProto.H_CMD) + to_bytes(WSProto.CMD_DRW | WSProto.CMD_IMG)
 BYTES_RELOAD = to_bytes(WSProto.H_RLD)
 INT_OBS = int(WSProto.H_OBS)
-INT_IMG = int(WSProto.H_IMG)
-INT_JPG = int(WSProto.IMG_JPG)
 
 # the numpy data type
 # it seems pytorch is optimized for float32
@@ -86,45 +79,31 @@ class Normalizable:
 
 class QwopEnv(gym.Env):
     """
-    A Gym environment for Bennet Foddy's game called _QWOP_.
+    A Gymnasium environment for Bennet Foddy's game QWOP (numeric state only).
 
     browser: Path to the web browser executable.
     driver: Path to the chromedriver executable.
-    render_mode: Either "browser" and "rgb_array":
-        With "browser", a call to `.render()` renders the current frame
-        in the browser and `None` is returned. With "rgb_array", the
-        same happens, but the frame itself is returned as RGB image data.
-    failure_cost: Subtracted from the reward at the end of unsuccessful
-        episodes.
+    failure_cost: Subtracted from the reward at the end of unsuccessful episodes.
     success_reward: Added to the reward at the end of successful episodes.
-    time_cost_mult: Multiplier for the amount subtracted from the reward
-        at each step.
-    frames_per_step: Number of frames to advance per call to `.step`
-        (aka. frameskip).
-    stat_in_browser: Display a table with various game stats in the browser
-        next to the game area.
+    time_cost_mult: Multiplier for the amount subtracted from the reward at each step.
+    frames_per_step: Number of frames to advance per call to `.step` (aka. frameskip).
+    stat_in_browser: Display a table with various game stats in the browser.
     game_in_browser: Display the game area itself in the browser.
-    text_in_browser: Display a static text next to the game area in the
-        browser.
-    reload_on_reset: Perform a page reload on each call to `.reset`
-        (aka. "hard reset").
-    auto_draw: Automatically draw the current frame on each call to `.step`.
+    text_in_browser: Display a static text next to the game area in the browser.
+    reload_on_reset: Perform a page reload on each call to `.reset` (aka. "hard reset").
     reduced_action_set: Reduce possible actions from 16 to just 9:
         Genuine set: (none),Q,W,O,P,QW,QO,QP,WO,WP,OP,QWO,QWP,QOP,WOP,QWOP
         Reduced set: (none),Q,W,O,P,QW,QP,WO,OP.
-    t_for_terminate: Map an additional action to the T key for terminating
-        the env (useful when a human is playing)
     loglevel: Logger level (DEBUG|INFO|WARN|ERROR).
     seed: Initial seed for QWOP.min.js's RNG.
     """
 
-    metadata = {"render_modes": ["browser", "rgb_array"], "render_fps": 30}
+    metadata = {}
 
     def __init__(
         self,
         browser=None,
         driver=None,
-        render_mode="browser",
         failure_cost=10,
         success_reward=50,
         time_cost_mult=10,
@@ -133,9 +112,7 @@ class QwopEnv(gym.Env):
         game_in_browser=True,
         text_in_browser=None,
         reload_on_reset=False,
-        auto_draw=False,
         reduced_action_set=False,
-        t_for_terminate=False,
         loglevel="WARN",
         seed=None,
         browser_mock=False,
@@ -148,6 +125,8 @@ class QwopEnv(gym.Env):
 
         if browser_mock:
             self.client = WSClientMock()
+            self.proc = None
+            self.shutdown = None
         else:
             if browser is None:
                 raise ValueError(
@@ -180,15 +159,12 @@ class QwopEnv(gym.Env):
             self.proc.start()
             self.client = WSClient(sock.getsockname()[1], loglevel, self.shutdown)
 
-        self.auto_draw = auto_draw
-        self.t_for_terminate = t_for_terminate
         self.reload_on_reset = reload_on_reset
         self.logger = Log.get_logger(__name__, loglevel)
 
         self.reduced_action_set = reduced_action_set
         self._set_keycodes()
 
-        self.render_mode = render_mode
         self.action_space = gym.spaces.Discrete(len(self.action_cmdflags))
         self.observation_space = gym.spaces.Box(
             shape=(60,), low=-1, high=1, dtype=DTYPE
@@ -207,12 +183,6 @@ class QwopEnv(gym.Env):
 
         zeros = np.zeros(self.observation_space.shape, dtype=DTYPE)
         self.noop_reaction = Reaction(0, 0, 0, zeros, zeros)
-
-        if self.t_for_terminate:
-            # "T" is always the last action
-            self.action_t = self.action_space.n - 1
-        else:
-            self.action_t = None
 
         self.steps = 0
         self.last_reaction = self.noop_reaction
@@ -271,12 +241,6 @@ class QwopEnv(gym.Env):
             functools.reduce(lambda a, e: a | e, t, 0) for t in self.keyflags_c
         ]
 
-        if self.t_for_terminate:
-            # add an extra "T" key which terminates env immediately
-            self.keycodes_c.append((ord("t"),))
-            self.keyflags_c.append(0)
-            self.action_cmdflags.append(0)
-
     def reset(self, seed=None, options=None):
         super().reset(seed=seed)
 
@@ -310,20 +274,17 @@ class QwopEnv(gym.Env):
 
         reaction = self._perform_action(action)
         reward = self._calc_reward(reaction, self.last_reaction)
-        terminated = reaction.game_over or action == self.action_t
+        terminated = reaction.game_over
         info = self._build_info(reaction)
 
-        self.last_reward = reward  # QWOP stats
-        self.total_reward += reward  # QWOP stats
-        self.last_reaction = reaction  # needed for reward calc
+        self.last_reward = reward
+        self.total_reward += reward
+        self.last_reaction = reaction
 
         return reaction.ndata, reward, terminated, False, info
 
     def _perform_action(self, action):
         cmdflags = WSProto.CMD_STP | self.action_cmdflags[action]
-
-        if self.auto_draw:
-            cmdflags |= WSProto.CMD_DRW
 
         data = (
             to_bytes(WSProto.H_CMD)
@@ -385,17 +346,6 @@ class QwopEnv(gym.Env):
             "is_success": reaction.is_success,
         }
 
-    def render(self, render_mode="browser"):
-        match self.render_mode:
-            case "rgb_array":
-                return self.render_rgb()
-            case "browser":
-                return self.render_browser()
-            case None:
-                gym.logger.warn("No render mode set")
-            case _:
-                gym.logger.warn("Render mode not implemented: %s" % self.render_mode)
-
     def close(self):
         self.client.close()
 
@@ -403,23 +353,3 @@ class QwopEnv(gym.Env):
             self.shutdown.set()
             self.proc.join(timeout=2)
             self.proc.terminate()
-
-    def render_browser(self):
-        self.client.send(BYTES_DRAW)
-
-    def render_bytes(self):
-        data = self.client.send(BYTES_RENDER)
-        assert data[0] == INT_IMG, f"expected an IMG header, got: {data[0]}"
-        assert data[1] == INT_JPG, f"expected JPEG format, got: {data[1]}"
-        return data[2:]
-
-    def render_img(self):
-        PIL.Image.open(io.BytesIO(self.render_bytes())).show()
-
-    def render_rgb(self):
-        return np.array(PIL.Image.open(io.BytesIO(self.render_bytes())))
-
-    def get_keys_to_action(self):
-        return dict(
-            [(tuple(sorted(keys)), i) for (i, keys) in enumerate(self.keycodes_c)]
-        )
