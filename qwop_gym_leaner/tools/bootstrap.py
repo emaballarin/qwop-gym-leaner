@@ -97,44 +97,5 @@ def bootstrap():
 
     w1.maybe_write("env.yml", w1.replace_paths)
     w1.maybe_write("benchmark.yml")
-    w1.maybe_write("play.yml")
     w1.maybe_write("record.yml")
     w1.maybe_write("replay.yml")
-    w1.maybe_write("spectate.yml")
-    w1.maybe_write("train_a2c.yml")
-    w1.maybe_write("train_airl.yml")
-    w1.maybe_write("train_bc.yml")
-    w1.maybe_write("train_dqn.yml")
-    w1.maybe_write("train_gail.yml")
-    w1.maybe_write("train_ppo.yml")
-    w1.maybe_write("train_qrdqn.yml")
-    w1.maybe_write("train_rppo.yml")
-
-    w2 = Writer(
-        pathlib.Path(__file__).parent / "templates" / "wandb",
-        pathlib.Path("config") / "wandb",
-        w1.overwrite,
-        browser_path=w1.browser_path,
-        driver_path=w1.driver_path,
-    )
-
-    w2.maybe_write("a2c.yml", w2.replace_paths)
-    w2.maybe_write("dqn.yml", w2.replace_paths)
-    w2.maybe_write("gail.yml", w2.replace_paths)
-    w2.maybe_write("ppo.yml", w2.replace_paths)
-    w2.maybe_write("qrdqn.yml", w2.replace_paths)
-    w2.maybe_write("rppo.yml", w2.replace_paths)
-
-    gamefile = pathlib.Path(__file__).parents[1] / "envs" / "v1" / "game" / "QWOP.min.js"
-
-    if not os.path.exists(gamefile):
-        print(
-            """
-
-To finish setup, run the following command:
-
-    curl -sL https://www.foddy.net/QWOP.min.js | qwop-gym-leaner patch
-
-or you can save QWOP.min.js locally and run `qwop-gym-leaner patch QWOP.min.js`.
-"""
-        )
