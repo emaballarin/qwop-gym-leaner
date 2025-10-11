@@ -96,8 +96,6 @@ In comparison, qwop-gym-leaner offers several key features:
   allow only the "useful" 8 key combinations.
 - great results (fast, human-like running) achieved by RL agents trained
   entirely through self-play, without pre-recorded expert demonstrations
-- qwop-gym-leaner uses reliable open-source implementations of RL algorithms in
-  contrast to many other projects using "roll-your-own" implementations.
 - QWOP's original JS source code is barely modified.
 
 ## Caveats
@@ -107,5 +105,6 @@ improvements:
 
 - the OS may put some pretty rough restrictions on the web browser's rendering
   as soon as it's put in the background (on OS X at least). Ideally, the browser
-  should run in a headless mode, but I couldn't find a headless browser that can
-  support WebGL.
+  should run in a headless mode, but experimentation with headless, WebGL-capable
+  web browsers (e.g. [Chrome](https://developer.chrome.com/blog/supercharge-web-ai-testing))
+  has been unsucessful so far.
