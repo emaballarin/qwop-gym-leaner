@@ -19,6 +19,8 @@ import os
 
 import gymnasium as gym
 
+__all__: list[str] = ["RecordWrapper"]
+
 
 class RecordWrapper(gym.Wrapper):
     def __init__(self, env, rec_file, overwrite, max_time, min_distance):

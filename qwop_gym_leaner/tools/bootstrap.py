@@ -18,6 +18,8 @@
 import os
 import pathlib
 
+__all__: list[str] = ["bootstrap"]
+
 
 class Writer:
     def __init__(self, srcdir, dstdir, overwrite=None, browser_path=None, driver_path=None):

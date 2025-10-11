@@ -25,6 +25,8 @@ import yaml
 
 from .. import QwopEnv
 
+__all__: list[str] = ["expand_env_kwargs", "register_env", "gen_seed", "gen_id"]
+
 
 def expand_env_kwargs(env_kwargs):
     env_include_cfg = env_kwargs.pop("__include__", None)

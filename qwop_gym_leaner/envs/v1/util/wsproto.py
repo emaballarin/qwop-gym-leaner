@@ -17,6 +17,8 @@
 # =============================================================================
 import sys
 
+__all__: list[str] = ["to_bytes", "WSProto"]
+
 
 def to_bytes(number, nbytes=1):
     return number.to_bytes(nbytes, sys.byteorder)

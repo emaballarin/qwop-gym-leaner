@@ -17,5 +17,7 @@
 # =============================================================================
 from qwop_gym_leaner.tools.main import main
 
+__all__: list[str] = ["main"]
+
 if __name__ == "__main__":
     main()

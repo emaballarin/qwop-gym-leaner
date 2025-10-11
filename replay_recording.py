@@ -6,6 +6,8 @@ import time
 
 from qwop_gym_leaner.envs.v1.qwop_env import QwopEnv
 
+__all__: list[str] = ["parse_recording", "replay"]
+
 
 def parse_recording(rec_file: str) -> tuple[int, list[int]]:
     """

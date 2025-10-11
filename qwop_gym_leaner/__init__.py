@@ -21,6 +21,6 @@ from .envs.v1.qwop_env import QwopEnv
 from .wrappers.record_wrapper import RecordWrapper
 from .wrappers.verbose_wrapper import VerboseWrapper
 
-all = [QwopEnv, VerboseWrapper, RecordWrapper]
+__all__: list[str] = ["QwopEnv", "VerboseWrapper", "RecordWrapper"]
 
 gymnasium.register(id="QWOP-v1", entry_point="qwop_gym_leaner:QwopEnv")

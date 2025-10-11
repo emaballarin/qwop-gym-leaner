@@ -19,6 +19,8 @@ import os
 import pathlib
 import sys
 
+__all__: list[str] = ["patch"]
+
 
 def patch(srcfile):
     if srcfile:

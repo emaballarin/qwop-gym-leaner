@@ -33,6 +33,8 @@ from .log import Log
 from .wsproto import to_bytes
 from .wsproto import WSProto
 
+__all__: list[str] = ["WSServer"]
+
 
 class Peer:
     def __init__(self, name):

@@ -17,6 +17,8 @@
 # =============================================================================
 import gymnasium as gym
 
+__all__: list[str] = ["AbsorbWrapper"]
+
 
 class AbsorbWrapper(gym.Wrapper):
     """Return terminated=False and the last non-terminal observation forever"""

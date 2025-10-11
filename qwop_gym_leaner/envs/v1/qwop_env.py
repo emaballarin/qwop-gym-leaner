@@ -33,6 +33,8 @@ from .util.wsproto import to_bytes
 from .util.wsproto import WSProto
 from .util.wsserver import WSServer
 
+__all__: list[str] = ["QwopEnv"]
+
 BYTES_RESET = to_bytes(WSProto.H_CMD) + to_bytes(WSProto.CMD_RST)
 BYTES_RELOAD = to_bytes(WSProto.H_RLD)
 INT_OBS = int(WSProto.H_OBS)

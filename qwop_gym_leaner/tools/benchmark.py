@@ -19,6 +19,8 @@ import time
 
 import gymnasium as gym
 
+__all__: list[str] = ["benchmark"]
+
 
 def benchmark(steps):
     env = gym.make("local/QWOP-v1")

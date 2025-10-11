@@ -25,6 +25,8 @@ from .log import Log
 from .wsproto import to_bytes
 from .wsproto import WSProto
 
+__all__: list[str] = ["WSClient", "WSClientMock"]
+
 
 class Shutdown(Exception):
     pass

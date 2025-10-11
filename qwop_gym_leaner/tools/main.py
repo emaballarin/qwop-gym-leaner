@@ -24,6 +24,8 @@ import yaml
 
 from . import common
 
+__all__: list[str] = ["main"]
+
 
 def run(action, cfg, tag=None):
     env_wrappers = cfg.pop("env_wrappers", {})

@@ -21,6 +21,8 @@ from datetime import datetime
 
 from .wsproto import WSProto
 
+__all__: list[str] = ["Log"]
+
 
 class RelativeTimeFormatter(logging.Formatter):
     def format(self, record):

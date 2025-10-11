@@ -23,6 +23,8 @@ import numpy as np
 
 from ..envs.v1.util.wsproto import WSProto
 
+__all__: list[str] = ["VerboseWrapper"]
+
 
 class VerboseWrapper(gym.Wrapper):
     """On each step, prints action along with some game stats"""
