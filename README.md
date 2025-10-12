@@ -67,7 +67,6 @@ options:
 action:
   benchmark         evaluate the actions/s achievable with this env
   bootstrap         perform initial setup
-  patch             apply patch to original QWOP.min.js code
   help              print this help message
 ```
 
