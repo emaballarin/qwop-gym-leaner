@@ -37,39 +37,6 @@ import qwop_gym_leaner
 env = gym.make("QWOP-v1", browser="/browser/path", driver="/driver/path")
 ```
 
-## The `qwop-gym-leaner` tool
-
-The `qwop-gym-leaner` executable is a handy command-line tool which makes it easy to
-play, record and replay episodes, train agents and more.
-
-Firstly, perform the initial setup:
-
-```
-qwop-gym-leaner bootstrap
-```
-
-Play the game (use Q, W, O, P keys):
-
-```bash
-qwop-gym-leaner play
-```
-
-Explore the other available commands:
-
-```bash
-$ qwop-gym-leaner -h
-usage: qwop-gym-leaner [options] <action>
-
-options:
-  -h, --help  show this help message and exit
-  -c FILE     config file, defaults to config/<action>.yml
-
-action:
-  benchmark         evaluate the actions/s achievable with this env
-  bootstrap         perform initial setup
-  help              print this help message
-```
-
 > [!WARNING]
 > Although no rendering occurs during training, the browser window must remain
 > open as the game is actually running at very high speeds behind the curtains.
@@ -96,14 +63,3 @@ In comparison, qwop-gym-leaner offers several key features:
 - great results (fast, human-like running) achieved by RL agents trained
   entirely through self-play, without pre-recorded expert demonstrations
 - QWOP's original JS source code is barely modified.
-
-## Caveats
-
-The below list highlights some areas in which the project could use some
-improvements:
-
-- the OS may put some pretty rough restrictions on the web browser's rendering
-  as soon as it's put in the background (on OS X at least). Ideally, the browser
-  should run in a headless mode, but experimentation with headless, WebGL-capable
-  web browsers (e.g. [Chrome](https://developer.chrome.com/blog/supercharge-web-ai-testing))
-  has been unsucessful so far.

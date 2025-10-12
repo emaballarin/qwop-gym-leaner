@@ -165,6 +165,16 @@ class WSServer:
         options.add_argument("disable-popup-blocking")
         options.add_argument("disable-notifications")
 
+        # Hardware-accelerated headless mode for when game is not displayed
+        # Based on: https://developer.chrome.com/blog/supercharge-web-ai-testing
+        if not self.game_in_browser:
+            options.add_argument("--headless=new")
+            options.add_argument("--no-sandbox")
+            options.add_argument("--disable-dev-shm-usage")
+            options.add_argument("--enable-gpu")
+            options.add_argument("--use-gl=angle")
+            options.add_argument("--use-angle=swiftshader")
+
         if self.game_in_browser and (self.stat_in_browser or self.text_in_browser):
             options.add_argument("window-size=1160,585")
             options.add_argument("window-position=650,130")
@@ -303,8 +313,8 @@ if __name__ == "__main__":
         sock=socket.socket(),
         manual_client=True,
         seed=0,
-        browser="/Applications/Brave Browser.app/Contents/MacOS/Brave Browser",
-        driver="/Users/simo/Projects/qwop-gym-leaner/vendor/chromedriver",
+        browser="chrome_for_testing",
+        driver="chromedriver_for_testing",
     )
 
     with ws.sock:
