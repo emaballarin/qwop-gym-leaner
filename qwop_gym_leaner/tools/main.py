@@ -59,24 +59,6 @@ To perform initial setup, please run command this in your terminal:
     sys.exit(1)
 
 
-def ensure_patched(progname):
-    qwopsrc = pathlib.Path(__file__).parents[1] / "envs" / "v1" / "game" / "QWOP.min.js"
-
-    if os.path.exists(qwopsrc):
-        return
-
-    print(
-        f"""
-Could not find patched QWOP.min.js.
-To patch QWOP.min.js, please run this command in your terminal:
-
-    curl -sL https://www.foddy.net/QWOP.min.js | qwop-gym-leaner patch
-"""
-    )
-
-    sys.exit(1)
-
-
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("action", help=argparse.SUPPRESS)
@@ -95,7 +77,6 @@ def main():
 action:
   benchmark         evaluate the actions/s achievable with this env
   bootstrap         perform initial setup
-  patch             apply patch to original QWOP.min.js code
   help              print this help message
 
 examples:
@@ -104,20 +85,14 @@ examples:
 """
 
     args = parser.parse_args()
-    qwopsrc = pathlib.Path(__file__).parents[1] / "envs" / "v1" / "game" / "QWOP.min.js"
 
-    # bootstrap and patch do not use config files
+    # bootstrap does not use config files
     if args.action == "bootstrap":
         from .bootstrap import bootstrap
 
         bootstrap()
-    elif args.action == "patch":
-        from .patch import patch
-
-        patch(args.extra)
     else:
         ensure_bootstrapped(parser.prog)
-        ensure_patched(parser.prog)
 
         if args.c is None:
             args.c = open(os.path.join("config", f"{args.action}.yml"), "r")
