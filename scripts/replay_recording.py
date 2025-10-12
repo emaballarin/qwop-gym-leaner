@@ -2,6 +2,7 @@
 """Replay recorded QWOP actions at human-understandable speed."""
 
 import argparse
+import os
 import time
 
 from qwop_gym_leaner.envs.v1.qwop_env import QwopEnv
@@ -13,25 +14,65 @@ def parse_recording(rec_file: str) -> tuple[int, list[int]]:
     """
     Parse a recording file and extract seed and actions.
 
+    Recording format:
+        - First line: seed=<integer>
+        - Subsequent lines: action integers (0-8 for reduced, 0-15 for full)
+        - Episode boundaries: * (success) or X (discarded) or empty line
+
     Returns:
         Tuple of (seed, actions) where actions is a list of action integers
+
+    Raises:
+        FileNotFoundError: If recording file doesn't exist
+        ValueError: If file format is invalid
     """
-    with open(rec_file, "r") as f:
-        lines = f.read().strip().split("\n")
+    # Check file exists
+    if not os.path.exists(rec_file):
+        raise FileNotFoundError(f"Recording file not found: {rec_file}")
 
-    # First line should be seed=<value>
-    if not lines or not lines[0].startswith("seed="):
-        raise ValueError(f"Invalid recording file format. First line should be 'seed=<value>'")
+    # Read file
+    try:
+        with open(rec_file, "r") as f:
+            lines = f.read().strip().split("\n")
+    except Exception as e:
+        raise ValueError(f"Failed to read recording file: {e}")
 
-    seed = int(lines[0].split("=")[1])
+    # Validate file is not empty
+    if not lines or len(lines) == 0:
+        raise ValueError("Recording file is empty")
+
+    # Parse and validate seed line
+    if not lines[0].startswith("seed="):
+        raise ValueError(f"Invalid recording format. First line should be 'seed=<value>', got: '{lines[0]}'")
+
+    try:
+        seed = int(lines[0].split("=")[1])
+    except (IndexError, ValueError) as e:
+        raise ValueError(f"Invalid seed format in first line: '{lines[0]}'. Error: {e}")
+
+    if seed < 0:
+        raise ValueError(f"Seed must be non-negative, got: {seed}")
+
+    # Parse actions
     actions = []
-
-    # Parse actions (stop at * or X which mark episode boundaries)
-    for line in lines[1:]:
+    for line_num, line in enumerate(lines[1:], start=2):
         line = line.strip()
+
+        # Stop at episode boundaries
         if line in ("*", "X", ""):
             break
-        actions.append(int(line))
+
+        # Validate action is an integer
+        try:
+            action = int(line)
+        except ValueError:
+            raise ValueError(f"Invalid action at line {line_num}: '{line}'. Expected an integer.")
+
+        # Validate action range (will be validated against action set later)
+        if action < 0 or action > 15:
+            raise ValueError(f"Invalid action value at line {line_num}: {action}. Action must be between 0 and 15.")
+
+        actions.append(action)
 
     return seed, actions
 
@@ -73,6 +114,17 @@ def replay(
         print("⚠ Warning: Recording contains no actions!")
         print("The episode may not have completed successfully during recording.")
         print("Try running the recording script again.")
+        return
+
+    # Validate actions against chosen action set
+    max_action = 8 if reduced_action_set else 15
+    invalid_actions = [a for a in actions if a > max_action]
+    if invalid_actions:
+        print(f"✗ Error: Recording contains invalid actions for the chosen action set")
+        print(f"  Action set: {'reduced (9 actions)' if reduced_action_set else 'full (16 actions)'}")
+        print(f"  Max valid action: {max_action}")
+        print(f"  Found {len(invalid_actions)} invalid action(s): {set(invalid_actions)}")
+        print(f"\nTry using {'--full-actions' if reduced_action_set else 'default settings (without --full-actions)'}")
         return
 
     # Action names for display
