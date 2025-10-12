@@ -84,6 +84,17 @@ class WSServer:
         self._window = None
         self._driver = None
         self._initialized = False
+        self._ensure_patched()
+
+    def _ensure_patched(self):
+        path = pathlib.Path(__file__).parents[1].joinpath("game", "QWOP.min.js")
+        if not os.path.exists(path):
+            msg = """
+Could not find patched QWOP.min.js. To fix this error, run the command:
+curl -sL https://www.foddy.net/QWOP.min.js | qwop-gym-leaner patch
+"""
+
+            raise Exception(msg)
 
     def cleanup_and_exit(self):
         if not self._shutdown.is_set():
@@ -98,6 +109,7 @@ class WSServer:
         # must set logger here, as .start() is called in another process
         self.logger = Log.get_logger(__name__, self.loglevel)
         self._shutdown = shutdown
+        self._ensure_patched()
         self._future = asyncio.Future()
 
         loop = asyncio.get_event_loop()

@@ -102,7 +102,7 @@ class QwopEnv(gym.Env):
         Genuine set: (none),Q,W,O,P,QW,QO,QP,WO,WP,OP,QWO,QWP,QOP,WOP,QWOP
         Reduced set: (none),Q,W,O,P,QW,QP,WO,OP.
     loglevel: Logger level (DEBUG|INFO|WARN|ERROR).
-    seed: Initial seed for QWOP.js's RNG.
+    seed: Initial seed for QWOP.min.js's RNG.
     """
 
     metadata = {}
