@@ -24,7 +24,7 @@
         "numpy >= 2",
         "pyyaml >= 6",
         "selenium >= 4.12",
-        "websockets >= 15",
+        "websockets >= 16.0",
     ]
     description = "A Gymnasium environment for Benett Foddy's game QWOP, made leaner!"
     keywords = [
