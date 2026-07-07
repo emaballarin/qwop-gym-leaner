@@ -15,9 +15,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # =============================================================================
-import hashlib
 import logging
-from datetime import datetime
+from typing import ClassVar
 
 from .wsproto import WSProto
 
@@ -26,8 +25,7 @@ __all__: list[str] = ["Log"]
 
 class RelativeTimeFormatter(logging.Formatter):
     def format(self, record):
-        reltime = record.relativeCreated
-        record.reltime = "%.2f" % (record.relativeCreated / 1000)
+        record.reltime = f"{record.relativeCreated / 1000:.2f}"
         return super().format(record)
 
 
@@ -44,7 +42,7 @@ class Log:
     DELIM_REMOTE = ":" * 79
 
     # for logging purposes
-    HMAP = {
+    HMAP: ClassVar[dict] = {
         WSProto.H_REG: "H_REG",
         WSProto.H_ACK: "H_ACK",
         WSProto.H_REJ: "H_REJ",
@@ -56,12 +54,12 @@ class Log:
         WSProto.H_RLD: "H_RLD",
     }
 
-    REGMAP = {
+    REGMAP: ClassVar[dict] = {
         WSProto.REG_JS: "REG_JS",
         WSProto.REG_PY: "REG_PY",
     }
 
-    CMDMAP = {
+    CMDMAP: ClassVar[dict] = {
         WSProto.CMD_STP: "STP",
         WSProto.CMD_K_Q: "K_Q",
         WSProto.CMD_K_W: "K_W",
@@ -72,56 +70,60 @@ class Log:
         WSProto.CMD_DRW: "DRW",
     }
 
-    OBSMAP = {
+    OBSMAP: ClassVar[dict] = {
         WSProto.OBS_PAS: "PAS",
         WSProto.OBS_END: "END",
+        WSProto.OBS_SUC: "SUC",
     }
 
-    IMGMAP = {
+    IMGMAP: ClassVar[dict] = {
         WSProto.IMG_JPG: "JPG",
         WSProto.IMG_PNG: "PNG",
     }
 
+    @staticmethod
     def get_logger(name, level):
         logger = logging.getLogger(name.split(".")[-1])
         logger.setLevel(getattr(logging, level))
 
-        fmt = "-- %(reltime)ss [%(name)s] %(levelname)s: %(message)s"
-        formatter = RelativeTimeFormatter(fmt)
+        # Avoid stacking duplicate handlers when called repeatedly for the same
+        # logger name (e.g. one QwopEnv per worker in a vectorized environment),
+        # which would otherwise print every log line once per handler.
+        if not logger.handlers:
+            fmt = "-- %(reltime)ss [%(name)s] %(levelname)s: %(message)s"
+            formatter = RelativeTimeFormatter(fmt)
 
-        loghandler = logging.StreamHandler()
-        loghandler.setLevel(logging.DEBUG)
-        loghandler.setFormatter(formatter)
-        logger.addHandler(loghandler)
+            loghandler = logging.StreamHandler()
+            loghandler.setLevel(logging.DEBUG)
+            loghandler.setFormatter(formatter)
+            logger.addHandler(loghandler)
 
         return logger
 
+    @staticmethod
     def format_remote(msg, client, longfmt):
         client_name = client.name if client else "??"
+        decoded = msg.decode("utf-8")
 
         if longfmt:
-            return "%s\n[ %s ] %s" % (
-                Log.DELIM_REMOTE,
-                client_name,
-                msg.decode("utf-8"),
-            )
-        else:
-            return "[ %s ] %s" % (client_name, msg.decode("utf-8"))
+            return f"{Log.DELIM_REMOTE}\n[ {client_name} ] {decoded}"
+        return f"[ {client_name} ] {decoded}"
 
+    @staticmethod
     def format_outbound(data, client):
         return Log.format_allbound(data, client, "out")
 
+    @staticmethod
     def format_inbound(data, client):
         return Log.format_allbound(data, client, "in")
 
+    @staticmethod
     def format_allbound(data, client, direction):
         client_name = client.name if client else "??"
 
         if direction == "in":
-            delim = Log.DELIM_IN
             arrow = "<--"
         else:
-            delim = Log.DELIM_OUT
             arrow = "-->"
 
         header_uint = data[0]
@@ -133,85 +135,44 @@ class Log:
             header2_name = Log.REGMAP.get(header2_uint)
             header2_repr = f"{header2_uint:08b}"
 
-            line2 = "%-16s | %-16s |" % (header_name, header2_name)
-            line3 = "%-16s | %-16s | %s" % (
-                header_repr,
-                header2_repr,
-                Log.data_repr(data[2:]),
-            )
+            line2 = f"{header_name!s:<16} | {header2_name!s:<16} |"
+            line3 = f"{header_repr:<16} | {header2_repr:<16} | {Log.data_repr(data[2:])}"
         elif header_uint == WSProto.H_CMD:
             header2_uint = data[1]
-            names = []
-            for k, v in Log.CMDMAP.items():
-                if header2_uint & k:
-                    names.append(v)
+            names = [v for k, v in Log.CMDMAP.items() if header2_uint & k]
 
             header2_name = "+".join(names)
             header2_repr = f"{header2_uint:08b}"
 
-            line2 = "%-16s | %-16s | (data)" % (header_name, header2_name)
-            line3 = "%-16s | %-16s | %s" % (
-                header_repr,
-                header2_repr,
-                Log.data_repr(data[2:]),
-            )
+            line2 = f"{header_name!s:<16} | {header2_name!s:<16} | (data)"
+            line3 = f"{header_repr:<16} | {header2_repr:<16} | {Log.data_repr(data[2:])}"
         elif header_uint == WSProto.H_OBS:
             header2_uint = data[1]
-            names = []
-            for k, v in Log.OBSMAP.items():
-                if header2_uint & k:
-                    names.append(v)
+            names = [v for k, v in Log.OBSMAP.items() if header2_uint & k]
 
             header2_name = "+".join(names)
             header2_repr = f"{header2_uint:08b}"
 
-            # line2 = "%-16s | %-16s | %-16s | md5" % (header_name, header2_name, "(data)")
-            # line3 = "%-16s | %-16s | %-16s | %s" % (header_repr, header2_repr, Log.data_repr(data[2:]), Log.md5(data[2:]))
-            line2 = "%-16s | %-16s | %-16s" % (header_name, header2_name, "(data)")
-            line3 = "%-16s | %-16s | %-16s" % (
-                header_repr,
-                header2_repr,
-                Log.data_repr(data[2:]),
-            )
+            line2 = f"{header_name!s:<16} | {header2_name!s:<16} | {'(data)':<16}"
+            line3 = f"{header_repr:<16} | {header2_repr:<16} | {Log.data_repr(data[2:]):<16}"
         elif header_uint == WSProto.H_IMG:
             header2_uint = data[1]
             header2_name = Log.IMGMAP.get(header2_uint)
             header2_repr = f"{header2_uint:08b}"
 
-            # line2 = "%-16s | %-16s | %-16s | md5" % (header_name, header2_name, "(data)")
-            # line3 = "%-16s | %-16s | %-16s | %s" % (header_repr, header2_repr, Log.data_repr(data[2:]), Log.md5(data[2:]))
-            line2 = "%-16s | %-16s | %-16s" % (header_name, header2_name, "(data)")
-            line3 = "%-16s | %-16s | %-16s" % (
-                header_repr,
-                header2_repr,
-                Log.data_repr(data[2:]),
-            )
+            line2 = f"{header_name!s:<16} | {header2_name!s:<16} | {'(data)':<16}"
+            line3 = f"{header_repr:<16} | {header2_repr:<16} | {Log.data_repr(data[2:]):<16}"
         else:
-            # line2 = "%-16s | %-16s | md5" % (header_name, "(data)")
-            # line3 = "%-16s | %-16s | %s" % (header_repr, Log.data_repr(data[1:]), Log.md5(data[2:]))
-            line2 = "%-16s | %-16s" % (header_name, "(data)")
-            line3 = "%-16s | %-16s" % (header_repr, Log.data_repr(data[1:]))
+            line2 = f"{header_name!s:<16} | {'(data)':<16}"
+            line3 = f"{header_repr:<16} | {Log.data_repr(data[1:]):<16}"
 
         delim = "-" * 79
 
         if Log.LEVEL == 0:
-            return "%s\n[%s%s] %s\n[%s%s] %s" % (
-                delim,
-                arrow,
-                client_name,
-                line2,
-                arrow,
-                client_name,
-                line3,
-            )
-        else:
-            return "[%s%s] %s" % (arrow, client_name, line2)
+            return f"{delim}\n[{arrow}{client_name}] {line2}\n[{arrow}{client_name}] {line3}"
+        return f"[{arrow}{client_name}] {line2}"
 
+    @staticmethod
     def data_repr(data):
         x = data.hex()
         return x if len(x) <= 16 else (x[:13] + "...")
-
-    def md5(data):
-        md5 = hashlib.md5()
-        md5.update(data)
-        return md5.hexdigest()

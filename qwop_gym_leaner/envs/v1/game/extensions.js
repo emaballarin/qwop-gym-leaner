@@ -1,1 +1,182 @@
-function urlparam_bool(t,e){const n=new URLSearchParams(window.location.search).get(t);return null===n?e:"1"===n||"true"===n}function urlparam_int(t,e){const n=new URLSearchParams(window.location.search).get(t);return null===n?e:parseInt(n)}function urlparam_string(t,e){const n=new URLSearchParams(window.location.search).get(t);return null===n?e:n}const CONFIG={port:urlparam_int("port"),seed:urlparam_int("seed"),intro:urlparam_bool("intro",!0),stepsize:urlparam_int("stepsize",1),text:urlparam_string("text",""),stat:urlparam_bool("stat",!1),game:urlparam_bool("game",!0)};function FN_STEP(){for(let t=CONFIG.stepsize;t--;)CORE.game.update(TIMESTEP_SIZE)}function FN_DRAW(){CORE.app.host.emitter.emit(4),CORE.app.host.on_internal_render()}function FN_STEP_AND_DRAW(){FN_STEP(),FN_DRAW(),CONFIG.stat&&FN_UPDATE_STATS()}function FN_RESET(){START_TIME=new Date,CORE.game.reset(),CORE.app.host.on_internal_update()}const OBS_PARTS=["torso","head","leftArm","leftCalf","leftFoot","leftForearm","leftThigh","rightArm","rightCalf","rightFoot","rightForearm","rightThigh"];function FN_OBSERVATION(){const t=OBS_PARTS.map(t=>CORE.game[t]),e=10+5*OBS_PARTS.length*4,n=new DataView(new ArrayBuffer(e));n.setUint8(0,WS.H_OBS);let o=0;const a=CORE.game.scoreTime/10,s=CORE.game.torso._components.get("physicsBody").getPosition().x/10;(CORE.game.gameEnded||s<-10||s>105)&&(o|=WS.OBS_END,s>100&&(o|=WS.OBS_SUC)),n.setUint8(1,o),n.setFloat32(2,a,LE),n.setFloat32(6,s,LE);let E=10;for(const e of t){const t=e._components.get("physicsBody",!1),o=t.getPosition(),a=t.getAngle(),s=t.getLinearVelocity();n.setFloat32(E,o.x,LE),E+=4,n.setFloat32(E,o.y,LE),E+=4,n.setFloat32(E,a,LE),E+=4,n.setFloat32(E,s.x,LE),E+=4,n.setFloat32(E,s.y,LE),E+=4}return n}function toclock(t){return Math.trunc(t/60).toString().padStart(2,"0")+":"+Math.trunc(t%60).toString().padStart(2,"0")+"."+(t-Math.trunc(t)).toString().slice(2,3)}function FN_UPDATE_STATS(t,e){if(t&&(t.getUint8(1)&WS.CMD_RST&&DISTANCE_BUFFER.splice(0,DISTANCE_BUFFER.length),t.byteLength>2)){const e=t.getUint16(2,LE),n=(t.getFloat32(4,LE),t.getFloat32(8,LE));document.getElementById("cell-steps").textContent=e,document.getElementById("cell-tot_reward").textContent=n.toFixed(2)}e||(e=FN_OBSERVATION());const n=new Float32Array(e.buffer.slice(2)),o=toclock(n[0]),a=toclock((new Date-START_TIME)/1e3);document.getElementById("cell-game_time").textContent=o,document.getElementById("cell-real_time").textContent=a;const s=n[1];document.getElementById("cell-distance").textContent=`${s.toFixed(1)} m`,DISTANCE_BUFFER.length<DISTANCE_BUFFER_SIZE?DISTANCE_BUFFER.push(s):(DISTANCE_BUFFER.splice(DISTANCE_BUFFER_SIZE-1,1),DISTANCE_BUFFER.unshift(s));const E=10*(DISTANCE_BUFFER[0]-DISTANCE_BUFFER[DISTANCE_BUFFER.length-1])/(TIMESTEP_SIZE*CONFIG.stepsize*(DISTANCE_BUFFER.length-1)||1);document.getElementById("cell-avg_speed").textContent=`${E.toFixed(1)} m/s`;let l=2;for(const t of OBS_PARTS){let e=document.getElementById(`row-${t}`).children;e[1].textContent=n[l].toFixed(1),e[2].textContent=n[l+1].toFixed(1),e[3].textContent=n[l+2].toFixed(1),e[4].textContent=n[l+3].toFixed(1),e[5].textContent=n[l+4].toFixed(1),l+=5}}let START_TIME;Math.seedrandom(CONFIG.seed);const TIMESTEP_SIZE=.03333333333333333,DISTANCE_BUFFER=[],DISTANCE_BUFFER_SIZE=10;QWOP();const CORE=QWOP.__i.Luxe.core,SNOW_CORE=QWOP.__i["snow.Snow"].core,LE=new Float32Array([1])[0]===new DataView(new Float32Array([1]).buffer).getFloat32(0,!0),FN_KEYDOWN=CORE.app.input.module.on_keydown.bind(CORE.app.input.module),FN_KEYUP=CORE.app.input.module.on_keyup.bind(CORE.app.input.module),keycodes=QWOP.__i["snow.system.input.Keycodes"];CORE.input.bind_key("step",keycodes.key_s),CORE.input.bind_key("draw",keycodes.key_d),CORE.input.bind_key("stepdraw",keycodes.key_f);const ws=new WS(FN_RESET,FN_STEP,FN_DRAW,FN_KEYDOWN,FN_KEYUP,FN_OBSERVATION,CONFIG.stat?FN_UPDATE_STATS:()=>{}),_oninputup=CORE.game.oninputup.bind(CORE.game);CORE.game.oninputup=function(t){switch(t){case"stepdraw":return FN_STEP_AND_DRAW();case"step":return FN_STEP();case"draw":return FN_DRAW();case"reset":return FN_RESET();case"escape":return FN_QUIT();default:_oninputup(t)}},CORE.app.window.handle.addEventListener("doneLoading",t=>{SNOW_CORE.__manual_mode=!0,CONFIG.text&&(document.getElementById("text").style.display="inline-block"),CONFIG.stat&&(document.getElementById("stat").style.display="inline-block"),CONFIG.game||(document.getElementById("gameContent").style.position="absolute",document.getElementById("gameContent").style.left="-1000px",document.getElementById("gameContent").style.display="block"),CONFIG.intro||(CORE.app.window.handle.dispatchEvent(new MouseEvent("mousedown")),CORE.app.window.handle.dispatchEvent(new MouseEvent("mouseup"))),document.getElementById("text").textContent=CONFIG.text,START_TIME=new Date,console.log("seed:",CONFIG.seed),FN_STEP(),ws.connect(CONFIG.port)});
+function urlparam_bool(t, e) {
+    const n = new URLSearchParams(window.location.search).get(t);
+    return null === n ? e : "1" === n || "true" === n;
+}
+function urlparam_int(t, e) {
+    const n = new URLSearchParams(window.location.search).get(t);
+    return null === n ? e : parseInt(n);
+}
+function urlparam_string(t, e) {
+    const n = new URLSearchParams(window.location.search).get(t);
+    return null === n ? e : n;
+}
+const CONFIG = {
+    port: urlparam_int("port"),
+    seed: urlparam_int("seed"),
+    intro: urlparam_bool("intro", !0),
+    stepsize: urlparam_int("stepsize", 1),
+    text: urlparam_string("text", ""),
+    stat: urlparam_bool("stat", !1),
+    game: urlparam_bool("game", !0),
+};
+function FN_STEP() {
+    for (let t = CONFIG.stepsize; t--;) CORE.game.update(TIMESTEP_SIZE);
+}
+function FN_DRAW() {
+    (CORE.app.host.emitter.emit(4), CORE.app.host.on_internal_render());
+}
+function FN_STEP_AND_DRAW() {
+    (FN_STEP(), FN_DRAW(), CONFIG.stat && FN_UPDATE_STATS());
+}
+function FN_RESET() {
+    ((START_TIME = new Date()), CORE.game.reset(), CORE.app.host.on_internal_update());
+}
+const OBS_PARTS = [
+    "torso",
+    "head",
+    "leftArm",
+    "leftCalf",
+    "leftFoot",
+    "leftForearm",
+    "leftThigh",
+    "rightArm",
+    "rightCalf",
+    "rightFoot",
+    "rightForearm",
+    "rightThigh",
+];
+function FN_OBSERVATION() {
+    const t = OBS_PARTS.map((t) => CORE.game[t]),
+        e = 10 + 5 * OBS_PARTS.length * 4,
+        n = new DataView(new ArrayBuffer(e));
+    n.setUint8(0, WS.H_OBS);
+    let o = 0;
+    const a = CORE.game.scoreTime / 10,
+        s = CORE.game.torso._components.get("physicsBody").getPosition().x / 10;
+    ((CORE.game.gameEnded || s < -10 || s > 105) && ((o |= WS.OBS_END), s > 100 && (o |= WS.OBS_SUC)),
+        n.setUint8(1, o),
+        n.setFloat32(2, a, LE),
+        n.setFloat32(6, s, LE));
+    let E = 10;
+    for (const e of t) {
+        const t = e._components.get("physicsBody", !1),
+            o = t.getPosition(),
+            a = t.getAngle(),
+            s = t.getLinearVelocity();
+        (n.setFloat32(E, o.x, LE),
+            (E += 4),
+            n.setFloat32(E, o.y, LE),
+            (E += 4),
+            n.setFloat32(E, a, LE),
+            (E += 4),
+            n.setFloat32(E, s.x, LE),
+            (E += 4),
+            n.setFloat32(E, s.y, LE),
+            (E += 4));
+    }
+    return n;
+}
+function toclock(t) {
+    return (
+        Math.trunc(t / 60)
+            .toString()
+            .padStart(2, "0") +
+        ":" +
+        Math.trunc(t % 60)
+            .toString()
+            .padStart(2, "0") +
+        "." +
+        (t - Math.trunc(t)).toString().slice(2, 3)
+    );
+}
+function FN_UPDATE_STATS(t, e) {
+    if (t && (t.getUint8(1) & WS.CMD_RST && DISTANCE_BUFFER.splice(0, DISTANCE_BUFFER.length), t.byteLength > 2)) {
+        const e = t.getUint16(2, LE),
+            n = (t.getFloat32(4, LE), t.getFloat32(8, LE));
+        ((document.getElementById("cell-steps").textContent = e),
+            (document.getElementById("cell-tot_reward").textContent = n.toFixed(2)));
+    }
+    e || (e = FN_OBSERVATION());
+    const n = new Float32Array(e.buffer.slice(2)),
+        o = toclock(n[0]),
+        a = toclock((new Date() - START_TIME) / 1e3);
+    ((document.getElementById("cell-game_time").textContent = o),
+        (document.getElementById("cell-real_time").textContent = a));
+    const s = n[1];
+    ((document.getElementById("cell-distance").textContent = `${s.toFixed(1)} m`),
+        DISTANCE_BUFFER.length < DISTANCE_BUFFER_SIZE
+            ? DISTANCE_BUFFER.push(s)
+            : (DISTANCE_BUFFER.splice(DISTANCE_BUFFER_SIZE - 1, 1), DISTANCE_BUFFER.unshift(s)));
+    const E =
+        (10 * (DISTANCE_BUFFER[0] - DISTANCE_BUFFER[DISTANCE_BUFFER.length - 1])) /
+        (TIMESTEP_SIZE * CONFIG.stepsize * (DISTANCE_BUFFER.length - 1) || 1);
+    document.getElementById("cell-avg_speed").textContent = `${E.toFixed(1)} m/s`;
+    let l = 2;
+    for (const t of OBS_PARTS) {
+        let e = document.getElementById(`row-${t}`).children;
+        ((e[1].textContent = n[l].toFixed(1)),
+            (e[2].textContent = n[l + 1].toFixed(1)),
+            (e[3].textContent = n[l + 2].toFixed(1)),
+            (e[4].textContent = n[l + 3].toFixed(1)),
+            (e[5].textContent = n[l + 4].toFixed(1)),
+            (l += 5));
+    }
+}
+let START_TIME;
+Math.seedrandom(CONFIG.seed);
+const TIMESTEP_SIZE = 0.03333333333333333,
+    DISTANCE_BUFFER = [],
+    DISTANCE_BUFFER_SIZE = 10;
+QWOP();
+const CORE = QWOP.__i.Luxe.core,
+    SNOW_CORE = QWOP.__i["snow.Snow"].core,
+    LE = new Float32Array([1])[0] === new DataView(new Float32Array([1]).buffer).getFloat32(0, !0),
+    FN_KEYDOWN = CORE.app.input.module.on_keydown.bind(CORE.app.input.module),
+    FN_KEYUP = CORE.app.input.module.on_keyup.bind(CORE.app.input.module),
+    keycodes = QWOP.__i["snow.system.input.Keycodes"];
+(CORE.input.bind_key("step", keycodes.key_s),
+    CORE.input.bind_key("draw", keycodes.key_d),
+    CORE.input.bind_key("stepdraw", keycodes.key_f));
+const ws = new WS(
+        FN_RESET,
+        FN_STEP,
+        FN_DRAW,
+        FN_KEYDOWN,
+        FN_KEYUP,
+        FN_OBSERVATION,
+        CONFIG.stat ? FN_UPDATE_STATS : () => {}
+    ),
+    _oninputup = CORE.game.oninputup.bind(CORE.game);
+((CORE.game.oninputup = function (t) {
+    switch (t) {
+        case "stepdraw":
+            return FN_STEP_AND_DRAW();
+        case "step":
+            return FN_STEP();
+        case "draw":
+            return FN_DRAW();
+        case "reset":
+            return FN_RESET();
+        case "escape":
+            return FN_QUIT();
+        default:
+            _oninputup(t);
+    }
+}),
+    CORE.app.window.handle.addEventListener("doneLoading", (t) => {
+        ((SNOW_CORE.__manual_mode = !0),
+            CONFIG.text && (document.getElementById("text").style.display = "inline-block"),
+            CONFIG.stat && (document.getElementById("stat").style.display = "inline-block"),
+            CONFIG.game ||
+                ((document.getElementById("gameContent").style.position = "absolute"),
+                (document.getElementById("gameContent").style.left = "-1000px"),
+                (document.getElementById("gameContent").style.display = "block")),
+            CONFIG.intro ||
+                (CORE.app.window.handle.dispatchEvent(new MouseEvent("mousedown")),
+                CORE.app.window.handle.dispatchEvent(new MouseEvent("mouseup"))),
+            (document.getElementById("text").textContent = CONFIG.text),
+            (START_TIME = new Date()),
+            console.log("seed:", CONFIG.seed),
+            FN_STEP(),
+            ws.connect(CONFIG.port));
+    }));

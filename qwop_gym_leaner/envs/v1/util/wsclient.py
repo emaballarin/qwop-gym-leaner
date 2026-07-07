@@ -49,9 +49,8 @@ class WSClient:
                 self.logger.debug("Connected")
                 break
             except Exception as e:
-                self.logger.warn("Failed to connect: %s" % str(e))
+                self.logger.warning("Failed to connect: %s", e)
                 time.sleep(5)
-                pass
 
     def _connect_attempt(self):
         self.ws = client.connect(f"ws://localhost:{self.port}", open_timeout=10)
@@ -63,7 +62,7 @@ class WSClient:
         if data[0] != WSProto.H_ACK:
             exp = np.binary_repr(WSProto.H_ACK)
             got = np.binary_repr(data[0])
-            raise Exception("Header error: expected %s, got: %s" % (exp, got))
+            raise Exception(f"Header error: expected {exp}, got: {got}")
 
     def send(self, data):
         while True:
@@ -74,17 +73,15 @@ class WSClient:
                 self.ws.send(data)
                 return self.ws.recv(timeout=3)
             except Exception as e:
-                self.logger.warn("Failed to send/receive: %s" % str(e))
+                self.logger.warning("Failed to send/receive: %s", e)
                 try:
                     self.close()
                 except Exception as e1:
-                    self.logger.warn("Failed to close connection: %s" % str(e1))
+                    self.logger.warning("Failed to close connection: %s", e1)
 
                 self.logger.info("Reconnecting in 5s...")
                 time.sleep(5)
                 self.connect()
-
-        raise Shutdown()
 
     def close(self):
         self.ws.close()

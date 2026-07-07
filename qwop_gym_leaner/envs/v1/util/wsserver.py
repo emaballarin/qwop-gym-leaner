@@ -20,7 +20,6 @@ import logging
 import os
 import pathlib
 import signal
-import socket
 import sys
 import urllib.parse
 import uuid
@@ -124,7 +123,7 @@ class WSServer:
         async with websockets.serve(self.handler, sock=self.sock) as server:
             self.port = server.sockets[0].getsockname()[1]
 
-            self.logger.info("Listening on port %d" % self.port)
+            self.logger.info("Listening on port %d", self.port)
 
             task = None
 
@@ -142,16 +141,17 @@ class WSServer:
 
     def build_url(self):
         file = pathlib.Path(__file__).parents[1].joinpath("game", "QWOP.html")
-        url = "file://%s" % file
-        url += "?port=%d" % self.port
-        url += "&seed=%d" % self.seed
-        url += "&game=%d" % self.game_in_browser
-        url += "&stat=%d" % self.stat_in_browser
-        url += "&text=%s" % urllib.parse.quote_plus(self.text_in_browser or "")
-        url += "&intro=0"
-        url += "&stepsize=%d" % self.stepsize
-
-        return url
+        text = urllib.parse.quote_plus(self.text_in_browser or "")
+        return (
+            f"file://{file}"
+            f"?port={self.port:d}"
+            f"&seed={self.seed:d}"
+            f"&game={self.game_in_browser:d}"
+            f"&stat={self.stat_in_browser:d}"
+            f"&text={text}"
+            f"&intro=0"
+            f"&stepsize={self.stepsize:d}"
+        )
 
     async def _launch_browser(self):
         self.logger.info("Launching web browser...")
@@ -159,7 +159,7 @@ class WSServer:
         options = webdriver.ChromeOptions()
         options.add_argument("allow-file-access-from-files")
         options.add_argument("allow-cross-origin-auth-prompt")
-        options.add_argument("user-agent=Chrome-%s" % uuid.uuid4())
+        options.add_argument(f"user-agent=Chrome-{uuid.uuid4()}")
         options.add_argument("disable-infobars")
         options.add_argument("disable-extensions")
         options.add_argument("disable-popup-blocking")
@@ -210,7 +210,6 @@ class WSServer:
                 self.logger.error("Browser window not found")
         except Exception as e:
             self.logger.error(str(e))
-            pass
 
         # window is dead
         if self._event.is_set():
@@ -254,7 +253,7 @@ class WSServer:
 
     async def _reload(self, src_peer, seed):
         assert src_peer == self._pypeer, "Received RELOAD from a non-py peer"
-        self.logger.info("Reloading browser page with new seed: %s" % seed)
+        self.logger.info("Reloading browser page with new seed: %s", seed)
 
         self.seed = seed
 
@@ -278,7 +277,7 @@ class WSServer:
 
     async def _handler(self, ws):
         ua = ws.request.headers.get("user-agent")
-        self.logger.info("Connection from: %s" % ua)
+        self.logger.info("Connection from: %s", ua)
 
         async for data in ws:
             src = self._peers.get(ws)
@@ -299,23 +298,10 @@ class WSServer:
                     longfmt = self.logger.level == logging.DEBUG
                     self.logger.info(Log.format_remote(payload, src, longfmt))
                 case WSProto.H_ERR:
-                    raise Exception("JS error: %s" % data[1:].decode())
+                    raise Exception(f"JS error: {data[1:].decode()}")
                 case _:
                     await self.send(src.other, data)
 
     async def send(self, peer, data):
         self.logger.debug(Log.format_outbound(data, peer))
         await peer.ws.send(data)
-
-
-if __name__ == "__main__":
-    ws = WSServer(
-        sock=socket.socket(),
-        manual_client=True,
-        seed=0,
-        browser="chrome_for_testing",
-        driver="chromedriver_for_testing",
-    )
-
-    with ws.sock:
-        ws.start()

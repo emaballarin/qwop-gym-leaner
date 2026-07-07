@@ -16,11 +16,11 @@ You should also check this [video](https://www.youtube.com/watch?v=2qNKjRwcx74) 
 - Real-time visualization of various game stats (optional)
 - Additional in-game controls for easier debugging
 
-\* given the state includes the steps since last hard reset, see [♻️ Resetting](./doc/env.md#resetting)
+\* given the state includes the steps since last hard reset
 
 ## Getting started
 
-1. Install [Python](https://www.python.org/downloads/) 3.10 or higher
+1. Install [Python](https://www.python.org/downloads/) 3.11 or higher
 1. Install a chrome-based web browser (Google Chrome, Brave, Chromium, etc.)
 1. Download [chromedriver](https://googlechromelabs.github.io/chrome-for-testing/) 116.0 or higher
 1. Install the `qwop-gym-leaner` package:
@@ -32,7 +32,8 @@ pip install qwop-gym-leaner
 Create an instance in your code:
 
 ```python
-import qwop_gym_leaner
+import gymnasium as gym
+import qwop_gym_leaner  # importing registers the "QWOP-v1" env id
 
 env = gym.make("QWOP-v1", browser="/browser/path", driver="/driver/path")
 ```

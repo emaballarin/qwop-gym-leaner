@@ -15,7 +15,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # =============================================================================
-import collections
 import time
 
 import gymnasium as gym
@@ -71,29 +70,22 @@ class VerboseWrapper(gym.Wrapper):
         v = ds / dt
 
         print(
-            "%-05d | %-4s | %-4s | %-6sm | %-6s m/s | %-6s | %6s.%s s | %-6s"
-            % (
-                self.n_steps,
-                action,
-                keys,
-                round(info["distance"], 1),
-                round(v, 1),
-                round(reward, 2),
-                int(info["time"]),
-                str(info["time"] - int(info["time"]))[2:3],
-                round(self.total_reward, 2),
-            )
+            f"{self.n_steps:<5d} | {action!s:<4} | {keys:<4} | "
+            f"{round(info['distance'], 1)!s:<6}m | {round(v, 1)!s:<6} m/s | "
+            f"{round(reward, 2)!s:<6} | "
+            f"{int(info['time'])!s:>6}.{str(info['time'] - int(info['time']))[2:3]} s | "
+            f"{round(self.total_reward, 2)!s:<6}"
         )
 
         elapsed_time = time.time() - self.start_time
 
         if terminated:
             print("Game over")
-            print("Elapsed time (real): %.1f seconds" % elapsed_time)
-            print("Elapsed time (game): %.1f seconds" % info["time"])
-            print("Distance ran: %.1f m" % info["distance"])
-            print("Average speed: %.1f m/s" % info["avgspeed"])
-            print("FPS: %.1f" % (self.n_steps / elapsed_time))
+            print(f"Elapsed time (real): {elapsed_time:.1f} seconds")
+            print(f"Elapsed time (game): {info['time']:.1f} seconds")
+            print(f"Distance ran: {info['distance']:.1f} m")
+            print(f"Average speed: {info['avgspeed']:.1f} m/s")
+            print(f"FPS: {self.n_steps / elapsed_time:.1f}")
 
         self.last_distance = info["distance"]
         self.last_time = info["time"]

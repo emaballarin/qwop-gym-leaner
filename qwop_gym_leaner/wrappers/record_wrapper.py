@@ -27,14 +27,13 @@ class RecordWrapper(gym.Wrapper):
         super().__init__(env)
 
         if os.path.exists(rec_file) and not overwrite:
-            raise Exception("rec_file already exists: %s" % rec_file)
+            raise Exception(f"rec_file already exists: {rec_file}")
 
         os.makedirs(os.path.dirname(rec_file), exist_ok=True)
 
-        print("Recording to %s" % rec_file)
+        print(f"Recording to {rec_file}")
         self.handle = open(rec_file, "w")
-        self.handle.write("seed=%d\n" % env.unwrapped.seedval)
-        self.overwrite = overwrite
+        self.handle.write(f"seed={env.unwrapped.seedval}\n")
         self.max_time = max_time or 999
         self.min_distance = min_distance or 0
         self.actions = []
@@ -45,30 +44,28 @@ class RecordWrapper(gym.Wrapper):
         self.actions.append(str(action))
 
         if terminated:
-            ep_info = "episode with time=%.2f" % info["time"]
-            ep_info += " and distance=%.2f" % info["distance"]
+            ep_info = f"episode with time={info['time']:.2f}"
+            ep_info += f" and distance={info['distance']:.2f}"
 
             if info["time"] > self.max_time:
-                print("Discarded %s (max_time exceeded)" % ep_info)
+                print(f"Discarded {ep_info} (max_time exceeded)")
                 self.discarded_episodes.append(self.actions)
             elif info["distance"] < self.min_distance:
-                print("Discarded %s (min_distance not reached)" % ep_info)
+                print(f"Discarded {ep_info} (min_distance not reached)")
                 self.discarded_episodes.append(self.actions)
             else:
                 # Dump discarded episodes only when there is
                 # a regular episode after them
                 if len(self.discarded_episodes) > 0:
-                    print("Dump %d discarded episodes" % len(self.discarded_episodes))
+                    print(f"Dump {len(self.discarded_episodes)} discarded episodes")
                     episodes = [ep + ["X"] for ep in self.discarded_episodes]
                     actions = [a for ep in episodes for a in ep]
                     self.handle.write("\n".join(actions) + "\n")
                     self.discarded_episodes = []
 
                 self.handle.write("\n".join(self.actions) + "\n*\n")
-                print("Recorded %s" % ep_info)
+                print(f"Recorded {ep_info}")
 
-            self.actions = []
-        elif info.get("manual_restart"):
             self.actions = []
 
         return obs, reward, terminated, truncated, info

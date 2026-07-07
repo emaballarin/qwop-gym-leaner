@@ -1,0 +1,3 @@
+# Minified, vendored game HTML (companion to QWOP.min.js / howler.js / seedrandom.js).
+# Reformatting vendored/minified third-party code is inappropriate.
+qwop_gym_leaner/envs/v1/game/QWOP.html

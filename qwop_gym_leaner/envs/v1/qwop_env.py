@@ -17,11 +17,11 @@
 # =============================================================================
 import functools
 import itertools
-import logging
 import multiprocessing
 import shutil
 import socket
 import struct
+from typing import ClassVar
 
 import gymnasium as gym
 import numpy as np
@@ -65,20 +65,9 @@ class Normalizable:
         self.limit_max = limit_max
         self.center = DTYPE((limit_min + limit_max) / 2)
         self.maxdev = DTYPE(limit_max - self.center)
-        self.min = DTYPE(0)
-        self.max = DTYPE(0)
 
     def normalize(self, value):
-        norm = (value - self.center) / self.maxdev
-
-        if value > self.max:
-            # assert value < self.limit_max, f"{self.name} max overflow: {value}"
-            self.max = value
-        elif value < self.min:
-            # assert value > self.limit_min, f"{self.name} min overflow: {value}"
-            self.min = value
-
-        return norm
+        return (value - self.center) / self.maxdev
 
     def denormalize(self, norm):
         return norm * self.maxdev + self.center
@@ -105,7 +94,7 @@ class QwopEnv(gym.Env):
     seed: Initial seed for QWOP.min.js's RNG.
     """
 
-    metadata = {}
+    metadata: ClassVar[dict] = {}
 
     def __init__(
         self,
@@ -124,7 +113,7 @@ class QwopEnv(gym.Env):
         seed=None,
         browser_mock=False,
     ):
-        seedval = seed or np.random.default_rng().integers(2**31)
+        seedval = seed if seed is not None else np.random.default_rng().integers(2**31)
         assert seedval >= 0 and seedval <= np.iinfo(np.int32).max
         self.seedval = int(seedval)
 
@@ -199,7 +188,7 @@ class QwopEnv(gym.Env):
         self.last_reward = DTYPE(0)
         self.total_reward = DTYPE(0)
 
-        self.logger.info("Initialized with seed: %d" % self.seedval)
+        self.logger.info("Initialized with seed: %d", self.seedval)
 
     def _set_keycodes(self):
         keymap = {
@@ -209,7 +198,7 @@ class QwopEnv(gym.Env):
             "p": WSProto.CMD_K_P,
         }
 
-        keycodes = [ord(x) for x in keymap.keys()]
+        keycodes = [ord(x) for x in keymap]
         keyflags = keymap.values()
 
         # All possible key combinations represented as lists of tuples
@@ -339,7 +328,8 @@ class QwopEnv(gym.Env):
     def _calc_reward(self, reaction, last_reaction):
         ds = reaction.distance - last_reaction.distance
         dt = reaction.time - last_reaction.time
-        v = ds / dt
+        # dt can be 0 for degenerate (e.g. duplicate/pass) observations; treat as no motion
+        v = ds / dt if dt != 0 else DTYPE(0)
         rew = v * self.speed_rew_mult - dt * self.time_cost_mult / self.frames_per_step
 
         if reaction.game_over:
@@ -351,10 +341,12 @@ class QwopEnv(gym.Env):
         return rew
 
     def _build_info(self, reaction):
+        # time is ~0 right after a reset; avoid a 0/0 nan leaking into info
+        avgspeed = reaction.distance / reaction.time if reaction.time != 0 else DTYPE(0)
         return {
             "time": reaction.time,
             "distance": reaction.distance,
-            "avgspeed": reaction.distance / reaction.time,
+            "avgspeed": avgspeed,
             "is_success": reaction.is_success,
         }
 

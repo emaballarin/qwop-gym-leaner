@@ -104,7 +104,7 @@ def replay(
         print(f"✗ Failed to parse recording file: {e}")
         return
 
-    print(f"✓ Recording loaded successfully!")
+    print("✓ Recording loaded successfully!")
     print(f"  Seed: {seed}")
     print(f"  Total actions: {len(actions)}")
     print(f"  Replay speed: {delay_per_step:.3f}s per step")
@@ -120,7 +120,7 @@ def replay(
     max_action = 8 if reduced_action_set else 15
     invalid_actions = [a for a in actions if a > max_action]
     if invalid_actions:
-        print(f"✗ Error: Recording contains invalid actions for the chosen action set")
+        print("✗ Error: Recording contains invalid actions for the chosen action set")
         print(f"  Action set: {'reduced (9 actions)' if reduced_action_set else 'full (16 actions)'}")
         print(f"  Max valid action: {max_action}")
         print(f"  Found {len(invalid_actions)} invalid action(s): {set(invalid_actions)}")
@@ -158,14 +158,14 @@ def replay(
         print(f"{'─' * 70}\n")
 
         # Reset environment
-        obs, info = env.reset()
+        _obs, info = env.reset()
         total_reward = 0.0
 
         print(f"Starting position: {info['distance']:.2f}m at {info['time']:.2f}s\n")
 
         # Replay actions
         for step, action in enumerate(actions):
-            obs, reward, terminated, truncated, info = env.step(action)
+            _obs, reward, terminated, truncated, info = env.step(action)
             total_reward += reward
 
             # Print progress every 10 steps
