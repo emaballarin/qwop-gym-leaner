@@ -24,4 +24,5 @@ from .wrappers.verbose_wrapper import VerboseWrapper
 
 __all__: list[str] = ["AbsorbWrapper", "QwopEnv", "RecordWrapper", "VerboseWrapper"]
 
-gymnasium.register(id="QWOP-v1", entry_point="qwop_gym_leaner:QwopEnv")
+# v2: rewards, dynamics and the default episode length changed; gymnasium refuses "QWOP-v1" with a pointer here
+gymnasium.register(id="QWOP-v2", entry_point="qwop_gym_leaner:QwopEnv")

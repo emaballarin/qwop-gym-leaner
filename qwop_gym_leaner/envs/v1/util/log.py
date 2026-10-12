@@ -24,31 +24,23 @@ __all__: list[str] = ["Log"]
 
 
 class RelativeTimeFormatter(logging.Formatter):
+    """Formatter exposing the time since logging start as `%(reltime)s`."""
+
     def format(self, record):
         record.reltime = f"{record.relativeCreated / 1000:.2f}"
         return super().format(record)
 
 
 class Log:
-    # 0 = print ALL messages
-    # 1 = print a (short) version of ALL messages
-    # 2 = filter out in/outbound messages, print the rest
-    # 3 = print only the explicit LOG calls
-    # 4 = silence
+    """Logger factory and one-line formatters for wire-protocol messages."""
 
-    LEVEL = 4
-    DELIM_OUT = ">" * 79
-    DELIM_IN = "<" * 79
     DELIM_REMOTE = ":" * 79
 
-    # for logging purposes
     HMAP: ClassVar[dict] = {
         WSProto.H_REG: "H_REG",
         WSProto.H_ACK: "H_ACK",
-        WSProto.H_REJ: "H_REJ",
         WSProto.H_CMD: "H_CMD",
         WSProto.H_OBS: "H_OBS",
-        WSProto.H_IMG: "H_IMG",
         WSProto.H_LOG: "H_LOG",
         WSProto.H_ERR: "H_ERR",
         WSProto.H_RLD: "H_RLD",
@@ -66,19 +58,12 @@ class Log:
         WSProto.CMD_K_O: "K_O",
         WSProto.CMD_K_P: "K_P",
         WSProto.CMD_RST: "RST",
-        WSProto.CMD_IMG: "IMG",
         WSProto.CMD_DRW: "DRW",
     }
 
     OBSMAP: ClassVar[dict] = {
-        WSProto.OBS_PAS: "PAS",
         WSProto.OBS_END: "END",
         WSProto.OBS_SUC: "SUC",
-    }
-
-    IMGMAP: ClassVar[dict] = {
-        WSProto.IMG_JPG: "JPG",
-        WSProto.IMG_PNG: "PNG",
     }
 
     @staticmethod
@@ -120,59 +105,16 @@ class Log:
     @staticmethod
     def format_allbound(data, client, direction):
         client_name = client.name if client else "??"
+        arrow = "<--" if direction == "in" else "-->"
+        header_name = Log.HMAP.get(data[0])
 
-        if direction == "in":
-            arrow = "<--"
+        if data[0] == WSProto.H_REG:
+            detail = f"{Log.REGMAP.get(data[1])!s:<16} |"
+        elif data[0] == WSProto.H_CMD:
+            detail = f"{'+'.join(v for k, v in Log.CMDMAP.items() if data[1] & k)!s:<16} | (data)"
+        elif data[0] == WSProto.H_OBS:
+            detail = f"{'+'.join(v for k, v in Log.OBSMAP.items() if data[1] & k)!s:<16} | {'(data)':<16}"
         else:
-            arrow = "-->"
+            detail = f"{'(data)':<16}"
 
-        header_uint = data[0]
-        header_name = Log.HMAP.get(header_uint)
-        header_repr = f"{header_uint:08b}"
-
-        if header_uint == WSProto.H_REG:
-            header2_uint = data[1]
-            header2_name = Log.REGMAP.get(header2_uint)
-            header2_repr = f"{header2_uint:08b}"
-
-            line2 = f"{header_name!s:<16} | {header2_name!s:<16} |"
-            line3 = f"{header_repr:<16} | {header2_repr:<16} | {Log.data_repr(data[2:])}"
-        elif header_uint == WSProto.H_CMD:
-            header2_uint = data[1]
-            names = [v for k, v in Log.CMDMAP.items() if header2_uint & k]
-
-            header2_name = "+".join(names)
-            header2_repr = f"{header2_uint:08b}"
-
-            line2 = f"{header_name!s:<16} | {header2_name!s:<16} | (data)"
-            line3 = f"{header_repr:<16} | {header2_repr:<16} | {Log.data_repr(data[2:])}"
-        elif header_uint == WSProto.H_OBS:
-            header2_uint = data[1]
-            names = [v for k, v in Log.OBSMAP.items() if header2_uint & k]
-
-            header2_name = "+".join(names)
-            header2_repr = f"{header2_uint:08b}"
-
-            line2 = f"{header_name!s:<16} | {header2_name!s:<16} | {'(data)':<16}"
-            line3 = f"{header_repr:<16} | {header2_repr:<16} | {Log.data_repr(data[2:]):<16}"
-        elif header_uint == WSProto.H_IMG:
-            header2_uint = data[1]
-            header2_name = Log.IMGMAP.get(header2_uint)
-            header2_repr = f"{header2_uint:08b}"
-
-            line2 = f"{header_name!s:<16} | {header2_name!s:<16} | {'(data)':<16}"
-            line3 = f"{header_repr:<16} | {header2_repr:<16} | {Log.data_repr(data[2:]):<16}"
-        else:
-            line2 = f"{header_name!s:<16} | {'(data)':<16}"
-            line3 = f"{header_repr:<16} | {Log.data_repr(data[1:]):<16}"
-
-        delim = "-" * 79
-
-        if Log.LEVEL == 0:
-            return f"{delim}\n[{arrow}{client_name}] {line2}\n[{arrow}{client_name}] {line3}"
-        return f"[{arrow}{client_name}] {line2}"
-
-    @staticmethod
-    def data_repr(data):
-        x = data.hex()
-        return x if len(x) <= 16 else (x[:13] + "...")
+        return f"[{arrow}{client_name}] {header_name!s:<16} | {detail}"

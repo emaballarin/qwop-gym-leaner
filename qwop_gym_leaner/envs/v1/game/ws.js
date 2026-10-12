@@ -2,10 +2,8 @@ class WS {
     static LOG = !1;
     static H_REG = 0;
     static H_ACK = 1;
-    static H_REJ = 2;
     static H_CMD = 3;
     static H_OBS = 4;
-    static H_IMG = 5;
     static H_LOG = 6;
     static H_ERR = 7;
     static H_RLD = 8;
@@ -17,13 +15,9 @@ class WS {
     static CMD_K_O = 8;
     static CMD_K_P = 16;
     static CMD_RST = 32;
-    static CMD_IMG = 64;
     static CMD_DRW = 128;
-    static OBS_PAS = 1;
     static OBS_END = 2;
     static OBS_SUC = 4;
-    static IMG_JPG = 0;
-    static IMG_PNG = 1;
     static H_DEFAULT = 0;
     static DOWN_Q = new KeyboardEvent("keydown", { keyCode: 81 });
     static DOWN_W = new KeyboardEvent("keydown", { keyCode: 87 });
@@ -65,10 +59,6 @@ class WS {
     send(t) {
         (t.setUint8(0, t.getUint8(0) | WS.H_DEFAULT), WS.LOG && console.log("> ", t), this.ws.send(t));
     }
-    request(t, e) {
-        const s = new DataView(new ArrayBuffer(2));
-        (s.setUint8(0, WS.H_CMD), s.setUint8(1, t), this.send(s));
-    }
     process_cmd(t) {
         const e = t.getUint8(1);
         try {
@@ -79,7 +69,7 @@ class WS {
                 e & WS.CMD_K_P ? this.fn_keydown(WS.DOWN_P) : this.fn_keyup(WS.UP_P),
                 e & WS.CMD_STP && this.fn_step(),
                 e & WS.CMD_DRW && this.fn_draw(),
-                e & WS.CMD_IMG ? this.image() : this.observe(t));
+                this.observe(t));
         } catch (t) {
             console.log(t.stack);
             const e = new TextEncoder().encode(" " + t.stack).buffer,
@@ -93,17 +83,6 @@ class WS {
             this.fn_keyup(WS.UP_O),
             this.fn_keyup(WS.UP_P),
             this.fn_reset());
-    }
-    image() {
-        document.getElementById("window1").toBlob((t) => {
-            t.arrayBuffer().then((t) => {
-                const e = new Uint8Array(2 + t.byteLength);
-                ((e[0] = WS.H_IMG),
-                    (e[1] = WS.IMG_JPG),
-                    e.set(new Uint8Array(t), 2),
-                    this.send(new DataView(e.buffer)));
-            });
-        }, "image/jpeg");
     }
     observe(t) {
         const e = this.fn_observation();

@@ -104,9 +104,9 @@ function FN_UPDATE_STATS(t, e) {
         (document.getElementById("cell-real_time").textContent = a));
     const s = n[1];
     ((document.getElementById("cell-distance").textContent = `${s.toFixed(1)} m`),
-        DISTANCE_BUFFER.length < DISTANCE_BUFFER_SIZE
-            ? DISTANCE_BUFFER.push(s)
-            : (DISTANCE_BUFFER.splice(DISTANCE_BUFFER_SIZE - 1, 1), DISTANCE_BUFFER.unshift(s)));
+        DISTANCE_BUFFER.length < DISTANCE_BUFFER_SIZE ?
+            DISTANCE_BUFFER.push(s)
+        :   (DISTANCE_BUFFER.splice(DISTANCE_BUFFER_SIZE - 1, 1), DISTANCE_BUFFER.unshift(s)));
     const E =
         (10 * (DISTANCE_BUFFER[0] - DISTANCE_BUFFER[DISTANCE_BUFFER.length - 1])) /
         (TIMESTEP_SIZE * CONFIG.stepsize * (DISTANCE_BUFFER.length - 1) || 1);
@@ -134,6 +134,44 @@ const CORE = QWOP.__i.Luxe.core,
     FN_KEYDOWN = CORE.app.input.module.on_keydown.bind(CORE.app.input.module),
     FN_KEYUP = CORE.app.input.module.on_keyup.bind(CORE.app.input.module),
     keycodes = QWOP.__i["snow.system.input.Keycodes"];
+// Soft resets must not depend on previous episodes. QWOP's reset() only re-creates the
+// player, so two pieces of Box2D state survive it: the track segments, which leapfrog
+// to follow the camera, and the broadphase tree, whose shape (built up by past moves)
+// sets the order in which contacts are created and solved. Both are restored here,
+// once the old player is gone and before the new one is created.
+const GLOBALS = QWOP.__i.Globals,
+    B2_BROADPHASE = QWOP.__i["box2D.collision.B2DynamicTreeBroadPhase"];
+function FN_RESET_TRACK() {
+    const g = CORE.game,
+        k = Math.floor(g.world_camera.get_pos().x / GLOBALS.screenWidth);
+    g.floorSprites.forEach((s, i) => {
+        const b = s._components.get("physicsBody", !1);
+        b.setPosition(((k + i) * GLOBALS.screenWidth) / GLOBALS.worldScale, b.getPosition().y);
+    });
+}
+function FN_REBUILD_BROADPHASE() {
+    const world = CORE.game.m_world,
+        cm = world.m_contactManager,
+        old = cm.m_broadPhase,
+        fresh = new B2_BROADPHASE(),
+        bodies = [];
+    // body and fixture lists are newest-first: re-insert proxies in creation order
+    for (let b = world.m_bodyList; b; b = b.m_next) bodies.unshift(b);
+    for (const b of bodies) {
+        const fixtures = [];
+        for (let f = b.m_fixtureList; f; f = f.m_next) fixtures.unshift(f);
+        for (const f of fixtures)
+            if (null != f.m_proxy) {
+                f.destroyProxy(old);
+                f.createProxy(fresh, b.m_xf);
+            }
+    }
+    cm.m_broadPhase = fresh;
+}
+const _create_player = CORE.game.create_player.bind(CORE.game);
+CORE.game.create_player = function () {
+    return (FN_RESET_TRACK(), FN_REBUILD_BROADPHASE(), _create_player());
+};
 (CORE.input.bind_key("step", keycodes.key_s),
     CORE.input.bind_key("draw", keycodes.key_d),
     CORE.input.bind_key("stepdraw", keycodes.key_f));
@@ -157,14 +195,14 @@ const ws = new WS(
             return FN_DRAW();
         case "reset":
             return FN_RESET();
-        case "escape":
-            return FN_QUIT();
         default:
             _oninputup(t);
     }
 }),
     CORE.app.window.handle.addEventListener("doneLoading", (t) => {
         ((SNOW_CORE.__manual_mode = !0),
+            // FN_RESET's on_internal_update() would otherwise advance the game clock by wall-clock time
+            (CORE.app.host.fixed_delta = TIMESTEP_SIZE),
             CONFIG.text && (document.getElementById("text").style.display = "inline-block"),
             CONFIG.stat && (document.getElementById("stat").style.display = "inline-block"),
             CONFIG.game ||

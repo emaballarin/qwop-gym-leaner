@@ -1,0 +1,44 @@
+name: tests
+
+on:
+    push:
+        branches: [main]
+    pull_request:
+
+jobs:
+    offline:
+        runs-on: ubuntu-latest
+        strategy:
+            fail-fast: false
+            matrix:
+                python-version: ["3.11", "3.12", "3.13", "3.14"]
+        steps:
+            - uses: actions/checkout@v7
+            - uses: actions/setup-python@v7
+              with:
+                  python-version: ${{ matrix.python-version }}
+            - run: pip install -e ".[test]"
+            - run: pytest
+
+    live:
+        runs-on: ubuntu-latest
+        strategy:
+            fail-fast: false
+            matrix:
+                python-version: ["3.11", "3.14"]
+        steps:
+            - uses: actions/checkout@v7
+            - uses: actions/setup-python@v7
+              with:
+                  python-version: ${{ matrix.python-version }}
+            - id: chrome
+              uses: browser-actions/setup-chrome@v2
+              with:
+                  install-chromedriver: true
+                  install-dependencies: true
+            - run: pip install -e ".[test]"
+            - run: pytest -m live
+              env:
+                  QWOP_REQUIRE_LIVE: "1"
+                  QWOP_BROWSER: ${{ steps.chrome.outputs.chrome-path }}
+                  QWOP_DRIVER: ${{ steps.chrome.outputs.chromedriver-path }}

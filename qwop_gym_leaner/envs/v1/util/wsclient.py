@@ -15,91 +15,118 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # =============================================================================
+import contextlib
 import struct
-import time
 
 import numpy as np
+from websockets.exceptions import ConnectionClosed
 from websockets.sync import client
 
 from .log import Log
+from .wsproto import ProtocolError
 from .wsproto import to_bytes
 from .wsproto import WSProto
+from .wsserver import BROWSER_TIMEOUT
 
-__all__: list[str] = ["WSClient", "WSClientMock"]
+__all__: list[str] = ["STEP_TIMEOUT", "WSClient", "WSClientMock"]
 
-
-class Shutdown(Exception):
-    pass
+STEP_TIMEOUT = 10  # seconds to wait for the reply to a command
 
 
 class WSClient:
-    def __init__(self, port, loglevel, shutdown):
-        self.port = port
+    """Synchronous client QwopEnv uses to exchange messages with its relay (`WSServer`).
+
+    Failures are never retried: a command that may or may not have reached the page
+    cannot be safely re-sent. Any failed exchange closes the connection for good (see
+    `poison`), so a late reply can never be read as the answer to another command.
+    """
+
+    def __init__(self, server, loglevel):
+        self.server = server
         self.logger = Log.get_logger(__name__, loglevel)
-        self.shutdown = shutdown
-        self.connect()
+        self._stack = contextlib.ExitStack()
+        self._broken = None  # why the connection was closed for good (a message, not the exception)
 
-    def connect(self):
-        while True:
-            if self.shutdown.is_set():
-                raise Shutdown()
+        try:
+            self.ws = self._stack.enter_context(
+                client.connect(f"ws://127.0.0.1:{server.port}", open_timeout=10, compression=None)
+            )
+        except (OSError, TimeoutError) as e:
+            raise self._failure("could not connect to the QWOP relay", e) from (server.error or e)
 
-            try:
-                self._connect_attempt()
-                self.logger.debug("Connected")
-                break
-            except Exception as e:
-                self.logger.warning("Failed to connect: %s", e)
-                time.sleep(5)
+        try:
+            # The relay acknowledges only once the page has loaded and registered
+            reply = self.send(to_bytes(WSProto.H_REG) + to_bytes(WSProto.REG_PY), timeout=BROWSER_TIMEOUT + 5)
+            if reply[0] != WSProto.H_ACK:
+                raise ProtocolError(f"expected an ACK header, got: {reply[0]}")
+        except BaseException:
+            self.close()
+            raise
+        self.logger.debug("Connected")
 
-    def _connect_attempt(self):
-        self.ws = client.connect(f"ws://localhost:{self.port}", open_timeout=10)
-        out = to_bytes(WSProto.H_REG) + to_bytes(WSProto.REG_PY)
+    def _failure(self, msg, cause):
+        if self.server.error is not None:
+            return ConnectionError(
+                f"{msg}: the relay failed with {type(self.server.error).__name__}: {self.server.error}"
+            )
+        return ConnectionError(f"{msg}: {type(cause).__name__}: {cause}")
 
-        self.ws.send(out)
-        data = self.ws.recv()
+    def poison(self, error):
+        """Close the connection for good; every later command raises, naming `error`."""
+        if self._broken is None:
+            # only the text is kept: the exception's traceback would keep the env alive
+            self._broken = f"{type(error).__name__}: {error}"
+        with contextlib.suppress(Exception):
+            self.close()
 
-        if data[0] != WSProto.H_ACK:
-            exp = np.binary_repr(WSProto.H_ACK)
-            got = np.binary_repr(data[0])
-            raise Exception(f"Header error: expected {exp}, got: {got}")
+    def send(self, data, timeout=STEP_TIMEOUT):
+        """Send one message and return the reply."""
+        if self._broken is not None:
+            raise ConnectionError(
+                f"the connection to the QWOP page was closed after an earlier failure ({self._broken})"
+            )
+        try:
+            self.ws.send(data)
+            reply = self.ws.recv(timeout=timeout)
+        except TimeoutError as e:
+            error = self._failure(f"no reply from the QWOP page within {timeout} s", e)
+            self.poison(error)
+            raise error from (self.server.error or e)
+        except (ConnectionClosed, OSError) as e:
+            error = self._failure("lost the connection to the QWOP page", e)
+            self.poison(error)
+            raise error from (self.server.error or e)
+        except BaseException as e:  # e.g. KeyboardInterrupt while waiting for the reply
+            self.poison(e)
+            raise
 
-    def send(self, data):
-        while True:
-            if self.shutdown.is_set():
-                raise Shutdown()
-
-            try:
-                self.ws.send(data)
-                return self.ws.recv(timeout=3)
-            except Exception as e:
-                self.logger.warning("Failed to send/receive: %s", e)
-                try:
-                    self.close()
-                except Exception as e1:
-                    self.logger.warning("Failed to close connection: %s", e1)
-
-                self.logger.info("Reconnecting in 5s...")
-                time.sleep(5)
-                self.connect()
+        if reply[0] == WSProto.H_ERR:
+            # the page failed half-way through the command: its state is unknown
+            error = RuntimeError(f"the QWOP page raised an error:{reply[1:].decode(errors='replace')}")
+            self.poison(error)
+            raise error
+        return reply
 
     def close(self):
-        self.ws.close()
-        self.ws.recv_events_thread.join()
+        self._stack.close()
 
 
 class WSClientMock:
-    def send(self, _data):
-        return self.recv()
+    """Stand-in for `WSClient` that needs no browser: ACKs reloads, answers anything else with a fixed observation."""
 
-    def recv(self):
+    def send(self, data, timeout=None):
+        if data[0] == WSProto.H_RLD:
+            return to_bytes(WSProto.H_ACK)
         return (
             to_bytes(WSProto.H_OBS)
             + to_bytes(0)  # flags
-            + struct.pack("=f", 1695977066)  # time
-            + struct.pack("=f", 5.0)  # distance
+            + struct.pack("=f", 2 / 300)  # time: two frames, as right after a reset
+            + struct.pack("=f", 0.25)  # distance: the starting position
             + np.zeros(60, dtype=np.float32).tobytes()  # obs
         )
+
+    def poison(self, error):
+        pass
 
     def close(self):
         pass

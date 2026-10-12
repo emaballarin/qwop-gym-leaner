@@ -8,7 +8,7 @@
         { name = "Simeon Manolov", email = "s.manolloff@gmail.com" },
     ]
     name = "qwop-gym-leaner"
-    version = "1.0.2"
+    version = "2.0.0"
 
     classifiers = [
         "License :: OSI Approved :: Apache Software License",
@@ -25,7 +25,7 @@
         "selenium >= 4.12",
         "websockets >= 15",
     ]
-    description = "A Gymnasium environment for Benett Foddy's game QWOP, made leaner!"
+    description = "A Gymnasium environment for Bennett Foddy's game QWOP, made leaner!"
     keywords = [
         "AI",
         "Farama-Foundation",
@@ -39,6 +39,9 @@
     readme = "README.md"
     requires-python = ">=3.11"
 
+[project.optional-dependencies]
+    test = ["pytest >= 8"]
+
 [project.urls]
     "Bug Tracker" = "https://github.com/emaballarin/qwop-gym-leaner/issues"
     "Homepage" = "https://github.com/emaballarin/qwop-gym-leaner"
@@ -46,3 +49,8 @@
 [tool.setuptools.packages.find]
     include = ["qwop_gym_leaner*"]
     where = ["."]
+
+[tool.pytest.ini_options]
+    addopts = "-m 'not live'"
+    markers = ["live: drives a real Chrome for Testing + chromedriver (run with `pytest -m live`)"]
+    testpaths = ["tests"]

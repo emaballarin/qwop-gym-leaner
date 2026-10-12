@@ -43,7 +43,10 @@ class VerboseWrapper(gym.Wrapper):
         self.last_distance = np.float32(0)
         self.last_time = np.float32(0)
         self.start_time = time.time()
-        return self.env.reset(*args, **kwargs)
+        obs, info = self.env.reset(*args, **kwargs)
+        self.last_distance = info["distance"]
+        self.last_time = info["time"]
+        return obs, info
 
     def step(self, action):
         obs, reward, terminated, truncated, info = self.env.step(action)
@@ -54,7 +57,7 @@ class VerboseWrapper(gym.Wrapper):
         self.n_steps += 1
         self.total_reward += reward
 
-        flags = self.env.action_cmdflags[action]
+        flags = self.env.unwrapped.action_cmdflags[action]
 
         if terminated:
             keys = "XXXX"
@@ -67,7 +70,7 @@ class VerboseWrapper(gym.Wrapper):
 
         ds = info["distance"] - self.last_distance
         dt = info["time"] - self.last_time
-        v = ds / dt
+        v = ds / dt if dt != 0 else 0.0
 
         print(
             f"{self.n_steps:<5d} | {action!s:<4} | {keys:<4} | "

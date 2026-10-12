@@ -16,34 +16,51 @@
 # limitations under the License.
 # =============================================================================
 import asyncio
+import contextlib
 import logging
-import os
 import pathlib
-import signal
 import sys
+import threading
 import urllib.parse
 import uuid
 
 import websockets
 from selenium import webdriver
 from selenium.webdriver.chrome.service import Service as ChromeService
+from websockets.exceptions import ConnectionClosed
 
 from .log import Log
+from .wsproto import ProtocolError
 from .wsproto import to_bytes
 from .wsproto import WSProto
 
-__all__: list[str] = ["WSServer"]
+__all__: list[str] = ["BROWSER_TIMEOUT", "RELOAD_TIMEOUT", "WSServer"]
+
+BROWSER_TIMEOUT = 60  # seconds for the browser to launch, load the page and register
+RELOAD_TIMEOUT = 30  # seconds for a page reload to complete and the page to re-register
+
+
+class _Stopped(Exception):
+    """A requested shutdown interrupted a wait inside the relay."""
 
 
 class Peer:
+    """One side of the relay: the QWOP page ("js") or QwopEnv ("py")."""
+
     def __init__(self, name):
         self.ws = None
         self.other = None
         self.name = name
-        self.ua = None
 
 
 class WSServer:
+    """Relay between the QWOP page and QwopEnv, running in a daemon thread of the env's process.
+
+    The thread owns an asyncio event loop, the websocket server and the selenium-driven
+    browser. The first fatal error is stored in `error` before any connection is closed,
+    so that `WSClient` can re-raise it in the env's thread.
+    """
+
     def __init__(
         self,
         sock,
@@ -55,13 +72,14 @@ class WSServer:
         text_in_browser,
         game_in_browser,
         loglevel,
-        manual_client=False,
     ):
         seedmin = -9007199254740991  # js Number.MIN_SAFE_INTEGER
         seedmax = 9007199254740991  # js Number.MAX_SAFE_INTEGER
-        assert seed >= seedmin and seed <= seedmax, f"seed must be between {seedmin} and {seedmax}"
+        if not seedmin <= seed <= seedmax:
+            raise ValueError(f"seed must be between {seedmin} and {seedmax}, got: {seed}")
 
         self.sock = sock
+        self.port = sock.getsockname()[1]
         self.seed = seed
         self.stat_in_browser = stat_in_browser
         self.game_in_browser = game_in_browser
@@ -69,75 +87,77 @@ class WSServer:
         self.driver = driver
         self.browser = browser
         self.stepsize = stepsize
-        self.loglevel = loglevel
+        self.logger = Log.get_logger(__name__, loglevel)
 
-        self._steps = 0
-        self._event = asyncio.Event()
-
+        self.error = None
+        self.shutdown = threading.Event()
+        self._thread = threading.Thread(target=self._run, name=f"qwop-wsserver-{self.port}", daemon=True)
         self._jspeer = Peer("js")
         self._pypeer = Peer("py")
         self._jspeer.other = self._pypeer
         self._pypeer.other = self._jspeer
         self._peers = {}
-        self._manual_client = manual_client
-        self._window = None
         self._driver = None
-        self._initialized = False
+        self._ready = None  # asyncio.Event set when the page has registered; created on the server's loop
 
-    def cleanup_and_exit(self):
-        if not self._shutdown.is_set():
-            self.logger.info("Shutting down")
+    def start(self):
+        self._thread.start()
 
-        self._shutdown.set()
-        self._event.set()
-        if not self._future.done():
-            self._future.set_result(0)
+    def stop(self, timeout=30):
+        """Signal shutdown and wait (up to `timeout` seconds) for the thread to quit the browser."""
+        self.shutdown.set()
+        if self._thread.is_alive() and self._thread is not threading.current_thread():
+            self._thread.join(timeout)
 
-    def start(self, shutdown):
-        # must set logger here, as .start() is called in another process
-        self.logger = Log.get_logger(__name__, self.loglevel)
-        self._shutdown = shutdown
-        self._future = asyncio.Future()
+    def is_alive(self):
+        return self._thread.is_alive()
 
-        loop = asyncio.get_event_loop()
-        loop.create_task(self.check_shutdown())
+    def _fail(self, error):
+        if isinstance(error, _Stopped):
+            return
+        if self.error is None:
+            self.error = error
+            self.logger.error("%s: %s", type(error).__name__, error)
+        self.shutdown.set()
 
-        if os.name == "posix":
-            loop.add_signal_handler(signal.SIGINT, self.cleanup_and_exit)
-            loop.add_signal_handler(signal.SIGTERM, self.cleanup_and_exit)
+    def _run(self):
+        try:
+            asyncio.run(self._main())
+        except Exception as e:  # noqa: BLE001 - any failure must reach the env via `self.error`
+            self._fail(e)
+        finally:
+            self.shutdown.set()
+            self._quit_browser()
 
+    async def _main(self):
+        self._ready = asyncio.Event()
         with self.sock:
-            while not shutdown.is_set():
-                loop.run_until_complete(self._start())
+            # small binary messages: compression only adds latency
+            async with websockets.serve(self.handler, sock=self.sock, compression=None):
+                self.logger.info("Listening on port %d", self.port)
+                try:
+                    await asyncio.to_thread(self._launch_browser)
+                    await self._wait_ready(BROWSER_TIMEOUT, "startup")
+                    while not self.shutdown.is_set():
+                        await asyncio.sleep(0.1)
+                except Exception as e:
+                    self._fail(e)  # record it before the connections close
+                    raise
+        self.logger.info("Shut down")
 
-            if self._driver:
-                self._driver.quit()
-
-    async def check_shutdown(self):
-        while not self._shutdown.is_set():
-            await asyncio.sleep(0.1)
-        self.logger.info("Shutting down")
-        self.cleanup_and_exit()
-
-    async def _start(self):
-        async with websockets.serve(self.handler, sock=self.sock) as server:
-            self.port = server.sockets[0].getsockname()[1]
-
-            self.logger.info("Listening on port %d", self.port)
-
-            task = None
-
-            # wait until driver connects
-            if self.driver and self.browser:
-                task = asyncio.create_task(self._launch_browser())
-                await asyncio.wait_for(self._event.wait(), timeout=30)
-
-            if task and task.exception():
-                self.logger.error(task.exception())
-                self.cleanup_and_exit()
-
-            await self._future
-            server.close()
+    async def _wait_ready(self, timeout, what):
+        """Wait for the page to register, giving up on shutdown (the server's close waits for every handler)."""
+        loop = asyncio.get_running_loop()
+        deadline = loop.time() + timeout
+        while not self._ready.is_set():
+            if self.shutdown.is_set():
+                raise _Stopped(what)
+            remaining = deadline - loop.time()
+            if remaining <= 0:
+                raise RuntimeError(f"browser page did not connect within {timeout} s ({what})")
+            with contextlib.suppress(TimeoutError):
+                async with asyncio.timeout(min(0.1, remaining)):
+                    await self._ready.wait()
 
     def build_url(self):
         file = pathlib.Path(__file__).parents[1].joinpath("game", "QWOP.html")
@@ -153,7 +173,8 @@ class WSServer:
             f"&stepsize={self.stepsize:d}"
         )
 
-    async def _launch_browser(self):
+    def _launch_browser(self):
+        """Start Chrome and load the game (blocking; runs in a worker thread)."""
         self.logger.info("Launching web browser...")
 
         options = webdriver.ChromeOptions()
@@ -165,7 +186,7 @@ class WSServer:
         options.add_argument("disable-popup-blocking")
         options.add_argument("disable-notifications")
 
-        # Hardware-accelerated headless mode for when game is not displayed
+        # Headless mode for when the game is not displayed
         # Based on: https://developer.chrome.com/blog/supercharge-web-ai-testing
         if not self.game_in_browser:
             options.add_argument("--headless=new")
@@ -182,9 +203,6 @@ class WSServer:
             options.add_argument("window-size=660,585")
             options.add_argument("window-position=650,130")
 
-        # keeping a ref to the driver keeps it running
-        # also, it allows to be explicitly closed on exit
-
         # https://www.selenium.dev/documentation/webdriver/getting_started/upgrade_to_selenium_4/#python-1
         service = ChromeService(executable_path=self.driver)
 
@@ -193,115 +211,108 @@ class WSServer:
         options.add_argument("--incognito")
 
         self._driver = webdriver.Chrome(service=service, options=options)
-        self._window = self._driver.window_handles[0]
         self._driver.get(self.build_url())
-        self._initialized = True
 
-    def _maybe_relaunch_browser(self):
-        if not self._initialized:
-            self.cleanup_and_exit()
-            return
-
-        try:
-            if self._driver and self._window in self._driver.window_handles:
-                # window is alive
-                return
-            else:
-                self.logger.error("Browser window not found")
-        except Exception as e:
-            self.logger.error(str(e))
-
-        # window is dead
-        if self._event.is_set():
-            self._event.clear()
-            asyncio.create_task(self._launch_browser())
+    def _quit_browser(self):
+        if self._driver is not None:
+            try:
+                self._driver.quit()
+            except Exception as e:  # noqa: BLE001 - best effort while shutting down
+                self.logger.warning("Failed to quit the browser: %s", e)
+            self._driver = None
 
     async def _register_peer(self, ws, peer_id):
-        ua = ws.request.headers.get("user-agent")
-
         match peer_id:
             case WSProto.REG_JS:
-                if self._jspeer.ws:
-                    await self._jspeer.ws.close()
-
-                self._jspeer.ws = ws
-                self._jspeer.ua = ua
-                self._peers[ws] = self._jspeer
-
-                await self.send(self._jspeer, to_bytes(WSProto.H_ACK))
-
-                self.logger.info("Browser (js client) registration ACK")
-                self._event.set()  # Unblock self._start()
-
+                peer = self._jspeer
             case WSProto.REG_PY:
-                if self._pypeer.ws:
-                    await self._pypeer.ws.close()
+                peer = self._pypeer
+            case _:
+                raise ProtocolError(f"unknown peer id: {peer_id}")
 
-                self._pypeer.ws = ws
-                self._pypeer.ua = ua
-                self._peers[ws] = self._pypeer
+        if peer.ws is not None and peer.ws is not ws:
+            await peer.ws.close()
 
-                # If py client reconnects, maybe the browser is dead
-                self._maybe_relaunch_browser()
+        peer.ws = ws
+        self._peers[ws] = peer
 
-                if not self._manual_client:
-                    self.logger.info("Waiting for browser...")
-                    await asyncio.wait_for(self._event.wait(), timeout=60)
+        if peer is self._pypeer:
+            self.logger.info("Waiting for browser...")
+            await self._wait_ready(BROWSER_TIMEOUT, "startup")
 
-                await self.send(self._pypeer, to_bytes(WSProto.H_ACK))
-                self.logger.info("QwopEnv (py client) registration ACK")
+        await self.send(peer, to_bytes(WSProto.H_ACK))
+        self.logger.info("%s client registration ACK", peer.name)
+
+        if peer is self._jspeer:
+            self._ready.set()
 
     async def _reload(self, src_peer, seed):
-        assert src_peer == self._pypeer, "Received RELOAD from a non-py peer"
+        if src_peer is not self._pypeer:
+            raise ProtocolError(f"received RELOAD from the {src_peer.name} peer")
         self.logger.info("Reloading browser page with new seed: %s", seed)
 
         self.seed = seed
+        ws, self._jspeer.ws = self._jspeer.ws, None
+        self._ready.clear()
 
-        self.logger.info("Closing JS connection")
-
-        ws = self._jspeer.ws
-        self._jspeer.ws = None
-        self._event.clear()
-
-        await ws.close()
-        self._driver.get(self.build_url())
-        self.logger.info("Waiting for browser ready...")
-        await asyncio.wait_for(self._event.wait(), timeout=5)
+        if ws is not None:
+            await ws.close()
+        await asyncio.to_thread(self._driver.get, self.build_url())
+        await self._wait_ready(RELOAD_TIMEOUT, "reload")
         await self.send(self._pypeer, to_bytes(WSProto.H_ACK))
 
     async def handler(self, ws):
         try:
             await self._handler(ws)
-        except Exception as e:
-            self.logger.error(str(e))
+        except Exception as e:  # noqa: BLE001 - a broken peer is fatal: the env cannot continue
+            self._fail(e)
+        finally:
+            peer = self._peers.pop(ws, None)
+            if peer is not None and peer.ws is ws:
+                peer.ws = None
 
     async def _handler(self, ws):
-        ua = ws.request.headers.get("user-agent")
-        self.logger.info("Connection from: %s", ua)
+        self.logger.info("Connection from: %s", ws.request.headers.get("user-agent"))
 
         async for data in ws:
             src = self._peers.get(ws)
-            self.logger.debug(Log.format_inbound(data, src))
+            if self.logger.isEnabledFor(logging.DEBUG):
+                self.logger.debug(Log.format_inbound(data, src))
 
             header = data[0]
-            payload = data[1:]
+            if src is None and header != WSProto.H_REG:
+                raise ProtocolError(f"unregistered peer sent header {header}")
 
             match header:
                 # put most common match cases on top
                 case WSProto.H_OBS | WSProto.H_CMD:
-                    await self.send(src.other, data)
+                    try:
+                        await self.send(src.other, data)
+                    except (ProtocolError, ConnectionClosed) as e:
+                        if src is not self._jspeer:
+                            raise
+                        # the env gave up on this reply (timeout, interrupt) and closed its connection
+                        self.logger.debug("Dropped a reply for the disconnected env: %s", e)
                 case WSProto.H_REG:
-                    await self._register_peer(ws, payload[0])
+                    await self._register_peer(ws, data[1])
                 case WSProto.H_RLD:
-                    await self._reload(src, int.from_bytes(payload[0:4], sys.byteorder))
+                    await self._reload(src, int.from_bytes(data[1:5], sys.byteorder))
                 case WSProto.H_LOG:
                     longfmt = self.logger.level == logging.DEBUG
-                    self.logger.info(Log.format_remote(payload, src, longfmt))
+                    self.logger.info(Log.format_remote(data[1:], src, longfmt))
                 case WSProto.H_ERR:
-                    raise Exception(f"JS error: {data[1:].decode()}")
+                    # forwarded so that the env raises it instead of waiting for a reply
+                    message = data[1:].decode(errors="replace")
+                    self.logger.error("JS error: %s", message)
+                    if self._pypeer.ws is None:
+                        raise RuntimeError(f"the QWOP page raised an error:{message}")
+                    await self.send(self._pypeer, data)
                 case _:
-                    await self.send(src.other, data)
+                    raise ProtocolError(f"unknown header {header} from the {src.name} peer")
 
     async def send(self, peer, data):
-        self.logger.debug(Log.format_outbound(data, peer))
+        if peer.ws is None:
+            raise ProtocolError(f"the {peer.name} peer is not connected")
+        if self.logger.isEnabledFor(logging.DEBUG):
+            self.logger.debug(Log.format_outbound(data, peer))
         await peer.ws.send(data)

@@ -21,7 +21,12 @@ __all__: list[str] = ["AbsorbWrapper"]
 
 
 class AbsorbWrapper(gym.Wrapper):
-    """Return terminated=False and the last non-terminal observation forever"""
+    """Never terminate: after the terminal step, repeat its observation, reward and info forever.
+
+    Gives fixed-horizon episodes (with a time limit outside this wrapper, and the env's
+    own limit off: `max_episode_time=None`), as needed by e.g. `imitation`'s adversarial
+    trainers. `terminated` is always False.
+    """
 
     def __init__(self, env):
         super().__init__(env)
